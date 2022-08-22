@@ -2,7 +2,7 @@
 
 using namespace std;
 
-VarDeclNode* VarDeclNode::try_parse() {
+VarDeclNode* VarDeclNode::try_parse(Parser& parser) {
 	return nullptr;
 }
 

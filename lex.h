@@ -3,27 +3,9 @@
 #include <fstream>
 #include <vector>
 
+#include "token.h"
+
 using namespace std;
-
-enum class TokenType {
-	identifier,
-	open_paren,
-	close_paren,
-	open_curly,
-	close_curly,
-	int_literal,
-	semicolon,
-};
-
-class Token {
-public:
-	Token(TokenType type, string contents) : type{type}, contents{contents} {}
-
-	TokenType type;
-	string contents; // used for storing eg. the name of a type
-
-	string toString();
-};
 
 class Lexer {
 public:

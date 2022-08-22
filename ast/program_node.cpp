@@ -2,10 +2,15 @@
 
 using namespace std;
 
-ProgramNode* ProgramNode::try_parse() {
+ProgramNode* ProgramNode::try_parse(Parser& parser) {
 	return nullptr;
 }
 
 void ProgramNode::ugly_print() {
-	cout << "FUNCTION_DECL_NODE" << endl;
+	cout << "PROGRAM_NODE:";
+	for (auto child : children) {
+		cout << " ";
+		child->ugly_print();
+	}
+	cout << endl;
 }

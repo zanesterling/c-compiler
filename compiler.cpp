@@ -39,6 +39,9 @@ int main(int argc, char** argv) {
 	}
 	ast->ugly_print();
 
+	// TODO: interpret the C code?
+	// TODO: generate machine code
+
 	delete ast;
 	sourceFile.close();
 	return 0;
