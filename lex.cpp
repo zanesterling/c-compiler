@@ -53,10 +53,21 @@ vector<Token> Lexer::lex() {
 				tokens.push_back(Token{ TokenType::int_literal, line.substr(i, j-i) });
 				i = j-1; // Advance past the scanned numeric literal.
 			} else {
-				cerr << "LEX_ERR: unexpected character '" << c << "'" << endl;
+				string errStr = "unexpected character '";
+				errStr += c;
+				errStr += "'";
+				cerr << "LEX_ERR: " << errStr << endl;
+				setError(move(errStr));
+				goto ERROR;
 			}
 		}
 	}
+	ERROR:
 
 	return tokens;
+}
+
+void Lexer::setError(string&& errStr) {
+	this->hasErr = true;
+	this->error = errStr;
 }

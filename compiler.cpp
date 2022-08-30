@@ -29,6 +29,10 @@ int main(int argc, char** argv) {
 
 	Lexer lexer(move(sourceFile));
 	vector<Token> tokens = lexer.lex();
+	if (lexer.hasError()) {
+		cerr << lexer.getError() << endl;
+		return 1;
+	}
 	if (DEBUG_LEX) for (Token t : tokens) cout << t.toString() << endl;
 
 	Parser parser(move(tokens));
