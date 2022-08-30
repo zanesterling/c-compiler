@@ -32,13 +32,17 @@ FunctionDeclNode* FunctionDeclNode::try_parse(Parser& parser) {
 		return nullptr;
 	}
 
-	return new FunctionDeclNode(move(body_statements));
+	return new FunctionDeclNode(type->type_name, func_name->contents, move(body_statements));
 }
 
 void FunctionDeclNode::ugly_print() {
-	cout << "FUNCTION_DECL_NODE:";
+	cout << "FUNCTION_DECL_NODE " << this->type << " " << this->name << "( ";
+	// TODO: Add print arglist.
+	cout << " ) {" << endl;
 	for (auto stmt : this->body_statements) {
-		cout << " ";
+		cout << "\t";
 		stmt->ugly_print();
+		cout << endl;
 	}
+	cout << "}" << endl;
 }

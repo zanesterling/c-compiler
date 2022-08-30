@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
 		cerr << "error parsing ast" << endl;
 		return 1;
 	}
+	cout << endl;
 	ast->ugly_print();
 
 	// TODO: interpret the C code?

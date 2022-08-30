@@ -47,11 +47,16 @@ private:
 	vector<AstNode*> children;
 };
 
+using Type = string;
+
 class FunctionDeclNode : public AstNode {
 public:
+	string name;
+	Type type;
 	vector<AstNode*> body_statements;
 
-	FunctionDeclNode(vector<AstNode*> body) : body_statements{body} {}
+	FunctionDeclNode(Type type, string name, vector<AstNode*> body)
+		: type{type}, name{name}, body_statements{body} {}
 	~FunctionDeclNode() {}
 
 	static FunctionDeclNode* try_parse(Parser& parser);
