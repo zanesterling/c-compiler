@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
 
 	// TODO: add macro preprocess
 
+	cout << "===== LEXING =====" << endl;
 	Lexer lexer(move(sourceFile));
 	vector<Token> tokens = lexer.lex();
 	if (lexer.hasError()) {
@@ -34,7 +35,9 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	if (DEBUG_LEX) for (Token t : tokens) cout << t.toString() << endl;
+	cout << endl;
 
+	cout << "===== PARSING =====" << endl;
 	Parser parser(move(tokens));
 	AstNode* ast = parser.parse();
 	if (ast == nullptr) {

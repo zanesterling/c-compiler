@@ -107,6 +107,17 @@ public:
 	void ugly_print();
 };
 
+class VarDeclStatementNode : public StatementNode {
+public:
+	Type type;
+	string var_name;
+
+	VarDeclStatementNode(Type type, string var_name)
+		: type{type}, var_name{var_name} {}
+
+	static VarDeclStatementNode* try_parse(Parser& parser);
+};
+
 class ExpressionNode : public AstNode {
 public:
 	ExpressionNode() {}
