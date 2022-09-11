@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <stdexcept>
 #include <vector>
 
@@ -28,22 +29,13 @@ public:
 class Grammar {
 public:
 	// TODO: Should these be const to avoid bad access?
-	vector<string> terminals;
-	vector<string> nonTerminals;
+	set<string> terminals;
 	vector<Production> productions;
 	int startProduction = -1;
 
 	Grammar() {}
 
-	static Grammar&& parse(string filename) {
-		ifstream f(filename);
-		if (!f.is_open()) {
-			throw new runtime_error("error opening file: " + filename);
-		}
+	static Grammar parse(string filename);
 
-		// TODO: parsing logic
-		Grammar grammar;
-
-		return move(grammar);
-	}
+	bool validate();
 };

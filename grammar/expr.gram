@@ -1,0 +1,6 @@
+%DIGIT
+%PLUS
+%MINUS
+list -> list PLUS DIGIT
+list -> list MINUS DIGIT
+list -> DIGIT
