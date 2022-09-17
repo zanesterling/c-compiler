@@ -67,13 +67,13 @@ void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
     if (kw_end == string::npos) {
       throw lineErr(lineNum, "unclosed paren for keyword", line);
     }
-    grammar.keywords.insert(line.substr(2, kw_end));
+    grammar.keywords.insert(line.substr(2, kw_end-2));
     // TODO: Add the codegen part.
   } else {
     // Regex token definition.
     size_t regex_end = 1;
     for (; regex_end < line.size() && !isspace(line[regex_end]); regex_end++);
-    grammar.tokens.push_back(line.substr(1, regex_end));
+    grammar.tokens.push_back(line.substr(1, regex_end-1));
     // TODO: Add the codegen part.
   }
 }
@@ -83,20 +83,22 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
   for (; i < line.size() && isalpha(line[i]); i++);
   auto headEnd = i;
 
-  if (line.compare(headEnd, 3, " ->") != 0) {
+  if (line.compare(i, 3, " ->") != 0) {
     throw lineErr(lineNum, "expected \" ->\" at index " + to_string(i), line);
   }
   i += 3;
 
   vector<Minal> body;
   while (i+1 < line.size()) {
-    if (line[i] != ' ' || !isalpha(line[++i])) {
-      throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+    if (line[i] != ' ' || !isalpha(line[i+1])) {
+      throw lineErr(lineNum, "expected minal at index " + to_string(i+1), line);
     }
-    int minalStart = i;
+    int minalStart = i+1;
+    i++;
     for (; i < line.size() && isalpha(line[i]); i++);
-    auto kind = isupper(line[i]) ? MinalKind::terminal : MinalKind::nonterminal;
-    body.push_back(Minal(kind, line.substr(minalStart, i)));
+    auto kind = isupper(line[minalStart])
+                ? MinalKind::terminal : MinalKind::nonterminal;
+    body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
   }
 
   auto head = line.substr(0, headEnd);
@@ -115,6 +117,9 @@ bool Grammar::validate() {
   cout << "\tstartNonterminal: " << startNonterminal << endl;
   cout << endl;
   for (auto production : productions) {
+    cout << production.head << " ->";
+    for (auto minal : production.body) cout << " \"" << minal.heart << '"';
+    cout << endl;
     for (auto minal : production.body) {
       if (minal.kind == MinalKind::terminal) {
         cout << "terminal:    " << minal.heart << endl;
