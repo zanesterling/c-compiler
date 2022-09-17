@@ -1,5 +1,9 @@
 #include "grammar.h"
 
+void parseTerminal(Grammar& grammar, string& line, size_t lineNum);
+void parseProduction(Grammar& grammar, string& line, size_t lineNum);
+
+
 runtime_error lineErr(int lineNum, string msg, string line) {
 	return runtime_error(to_string(lineNum)+": " + msg+": \"" + line + "\"");
 }
@@ -16,38 +20,10 @@ Grammar Grammar::parse(string filename) {
 	while (getline(f, line)) {
 		if (line.size() == 0) continue;
 		if (line[0] == '%') { // Terminal declaration.
-			// TODO: terminals probably more complex than this
-			for (int i = 1; i < line.size(); i++) {
-				if (line[i] < 'A' || 'Z' < line[i]) {
-					throw lineErr(lineNum, "invalid terminal", line);
-				}
-			}
-			grammar.terminals.insert(line.substr(1));
+			parseTerminal(grammar, line, lineNum);
 		} else if (line.find("->") != string::npos) { // Production.
-			int i = 0;
-			for (; i < line.size() && isalpha(line[i]); i++);
-			auto headEnd = i;
-
-			if (line.compare(headEnd, 3, " ->") != 0) {
-				throw lineErr(lineNum, "expected \" ->\" at index " + to_string(i), line);
-			}
-			i += 3;
-
-			vector<Minal> body;
-			while (i+1 < line.size()) {
-				if (line[i] != ' ' || !isalpha(line[++i])) {
-					throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
-				}
-				int minalStart = i;
-				for (; i < line.size() && isalpha(line[i]); i++);
-				auto kind = isupper(line[i]) ? MinalKind::terminal : MinalKind::nonterminal;
-				body.push_back(Minal{kind, line.substr(minalStart, i)});
-			}
-
-			auto head = line.substr(0, headEnd);
-			grammar.productions.push_back(Production{head, body});
-			grammar.nonterminals.insert(head);
-		} else if (line[0] == '!') {
+			parseProduction(grammar, line, lineNum);
+		} else if (line[0] == '!') { // Set root nonterminal.
 			if (line.size() == 1) {
 				throw lineErr(lineNum, "empty start nonterminal", line);
 			}
@@ -71,6 +47,42 @@ Grammar Grammar::parse(string filename) {
 	}
 
 	return grammar;
+}
+
+void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
+	// TODO: terminals probably more complex than this
+	for (int i = 1; i < line.size(); i++) {
+		if (line[i] < 'A' || 'Z' < line[i]) {
+			throw lineErr(lineNum, "invalid terminal", line);
+		}
+	}
+	grammar.terminals.insert(line.substr(1));
+}
+
+void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
+	int i = 0;
+	for (; i < line.size() && isalpha(line[i]); i++);
+	auto headEnd = i;
+
+	if (line.compare(headEnd, 3, " ->") != 0) {
+		throw lineErr(lineNum, "expected \" ->\" at index " + to_string(i), line);
+	}
+	i += 3;
+
+	vector<Minal> body;
+	while (i+1 < line.size()) {
+		if (line[i] != ' ' || !isalpha(line[++i])) {
+			throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+		}
+		int minalStart = i;
+		for (; i < line.size() && isalpha(line[i]); i++);
+		auto kind = isupper(line[i]) ? MinalKind::terminal : MinalKind::nonterminal;
+		body.push_back(Minal{kind, line.substr(minalStart, i)});
+	}
+
+	auto head = line.substr(0, headEnd);
+	grammar.productions.push_back(Production{head, body});
+	grammar.nonterminals.insert(head);
 }
 
 bool Grammar::validate() {
