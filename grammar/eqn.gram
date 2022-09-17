@@ -1,0 +1,15 @@
+%NUMBER
+%VARIABLE
+%EQUALS
+%PLUS
+%MINUS
+
+eqn -> expr EQUALS expr
+expr -> NUMBER
+expr -> VARIABLE
+expr -> expr PLUS NUMBER
+expr -> expr PLUS VARIABLE
+expr -> expr MINUS NUMBER
+expr -> expr MINUS VARIABLE
+
+!eqn

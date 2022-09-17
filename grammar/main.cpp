@@ -11,7 +11,7 @@ int main() {
 		cout << e.what() << endl;
 		return 1;
 	}
-	if (grammar.validate()) {
+	if (!grammar.validate()) {
 		cout << "grammar \"" << fn << "\" valid!" << endl;
 	} else {
 		cout << "grammar \"" << fn << "\" invalid :(" << endl;

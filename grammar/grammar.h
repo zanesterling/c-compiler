@@ -30,8 +30,9 @@ class Grammar {
 public:
 	// TODO: Should these be const to avoid bad access?
 	set<string> terminals;
+	set<string> nonterminals;
 	vector<Production> productions;
-	int startProduction = -1;
+	string startNonterminal;
 
 	Grammar() {}
 
