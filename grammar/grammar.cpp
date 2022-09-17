@@ -50,13 +50,32 @@ Grammar Grammar::parse(string filename) {
 }
 
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
-  // TODO: terminals probably more complex than this
-  for (int i = 1; i < line.size(); i++) {
-    if (line[i] < 'A' || 'Z' < line[i]) {
-      throw lineErr(lineNum, "invalid terminal", line);
+  if (isalpha(line[1]) && isupper(line[1])) {
+    // Alias definition.
+    size_t alias_end = 1;
+    for (; alias_end < line.size() && !isspace(line[alias_end]); alias_end++);
+    string alias = line.substr(1, alias_end-1);
+
+    size_t regex_start = alias_end;
+    for (; regex_start < line.size() && isspace(line[regex_start]); regex_start++);
+    string regex = line.substr(regex_start);
+
+    grammar.aliases[alias] = regex;
+  } else if (line[1] == '"') {
+    // Keyword definition.
+    auto kw_end = line.find('"', 2);
+    if (kw_end == string::npos) {
+      throw lineErr(lineNum, "unclosed paren for keyword", line);
     }
+    grammar.keywords.insert(line.substr(2, kw_end));
+    // TODO: Add the codegen part.
+  } else {
+    // Regex token definition.
+    size_t regex_end = 1;
+    for (; regex_end < line.size() && !isspace(line[regex_end]); regex_end++);
+    grammar.tokens.push_back(line.substr(1, regex_end));
+    // TODO: Add the codegen part.
   }
-  grammar.terminals.insert(line.substr(1));
 }
 
 void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
@@ -86,14 +105,24 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
 }
 
 bool Grammar::validate() {
-  cout << "terminals: " << terminals.size() << endl;
-  cout << "nonterminals: " << nonterminals.size() << endl;
-  cout << "productions: " << productions.size() << endl;
-  cout << "startNonterminal: " << startNonterminal << endl;
+  cout << "LEX:" << endl;
+  cout << "\taliases: " << aliases.size() << endl;
+  cout << "\tkeywords: " << keywords.size() << endl;
+  cout << "\tterminals: " << terminals.size() << endl;
+  cout << "GRAMMAR:" << endl;
+  cout << "\tnonterminals: " << nonterminals.size() << endl;
+  cout << "\tproductions: " << productions.size() << endl;
+  cout << "\tstartNonterminal: " << startNonterminal << endl;
+  cout << endl;
   for (auto production : productions) {
     for (auto minal : production.body) {
-      if (minal.kind == MinalKind::terminal) continue;
-      if (nonterminals.count(minal.heart) == 0) return false;
+      if (minal.kind == MinalKind::terminal) {
+        cout << "terminal:    " << minal.heart << endl;
+        if (terminals.count(minal.heart) == 0) return false;
+      } else {
+        cout << "nonterminal: " << minal.heart << endl;
+        if (nonterminals.count(minal.heart) == 0) return false;
+      }
     }
   }
   return true;
