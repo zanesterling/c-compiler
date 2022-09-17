@@ -77,7 +77,7 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
 		int minalStart = i;
 		for (; i < line.size() && isalpha(line[i]); i++);
 		auto kind = isupper(line[i]) ? MinalKind::terminal : MinalKind::nonterminal;
-		body.push_back(Minal{kind, line.substr(minalStart, i)});
+		body.push_back(Minal(kind, line.substr(minalStart, i)));
 	}
 
 	auto head = line.substr(0, headEnd);
