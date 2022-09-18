@@ -1,6 +1,6 @@
-%DIGIT
-%PLUS
-%MINUS
+%[0-9] DIGIT
+%"+" PLUS
+%"-" MINUS
 
 list -> list PLUS DIGIT
 list -> list MINUS DIGIT

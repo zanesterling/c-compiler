@@ -50,6 +50,7 @@ Grammar Grammar::parse(string filename) {
 }
 
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
+  // TODO: Switch to codegen later for kw and regex tokens?
   if (isalpha(line[1]) && isupper(line[1])) {
     // Alias definition.
     size_t alias_end = 1;
@@ -65,16 +66,31 @@ void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
     // Keyword definition.
     auto kw_end = line.find('"', 2);
     if (kw_end == string::npos) {
-      throw lineErr(lineNum, "unclosed paren for keyword", line);
+      throw lineErr(lineNum, "unclosed quote for keyword", line);
     }
-    grammar.keywords.insert(line.substr(2, kw_end-2));
-    // TODO: Add the codegen part.
+    auto kw_def = line.substr(2, kw_end-2);
+
+    auto i=kw_end+2;
+    for (; i<line.size() && isalpha(line[i]); i++);
+    if (i < line.size()) {
+      throw lineErr(lineNum, "expected line to end at index " + to_string(i), line);
+    }
+    auto name = line.substr(kw_end+2, i-(kw_end+1));
+    grammar.keywords[name] = kw_def;
   } else {
     // Regex token definition.
     size_t regex_end = 1;
     for (; regex_end < line.size() && !isspace(line[regex_end]); regex_end++);
-    grammar.tokens.push_back(line.substr(1, regex_end-1));
-    // TODO: Add the codegen part.
+    auto regex = line.substr(1, regex_end-1);
+
+    auto i = regex_end+1;
+    for (; i < line.size() && isalpha(line[i]); i++);
+    if (i < line.size()) {
+      throw lineErr(lineNum, "expected line to end at index " + to_string(i),
+                    line);
+    }
+    auto name = line.substr(regex_end+1, i-(regex_end+1));
+    grammar.tokens[name] = regex;
   }
 }
 
@@ -110,7 +126,7 @@ bool Grammar::validate() {
   cout << "LEX:" << endl;
   cout << "\taliases: " << aliases.size() << endl;
   cout << "\tkeywords: " << keywords.size() << endl;
-  cout << "\tterminals: " << terminals.size() << endl;
+  cout << "\ttokens: " << tokens.size() << endl;
   cout << "GRAMMAR:" << endl;
   cout << "\tnonterminals: " << nonterminals.size() << endl;
   cout << "\tproductions: " << productions.size() << endl;
@@ -123,7 +139,8 @@ bool Grammar::validate() {
     for (auto minal : production.body) {
       if (minal.kind == MinalKind::terminal) {
         cout << "terminal:    " << minal.heart << endl;
-        if (terminals.count(minal.heart) == 0) return false;
+        if (keywords.count(minal.heart) == 0 &&
+            tokens.count(minal.heart) == 0) return false;
       } else {
         cout << "nonterminal: " << minal.heart << endl;
         if (nonterminals.count(minal.heart) == 0) return false;

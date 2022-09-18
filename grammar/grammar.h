@@ -31,10 +31,9 @@ class Grammar {
 public:
   // TODO: Should these be const to avoid bad access?
   map<string, string> aliases;
-  set<string> keywords;
-  vector<string> tokens;
+  map<string, string> keywords;
+  map<string, string> tokens;
 
-  set<string> terminals;
   set<string> nonterminals;
   vector<Production> productions;
   string startNonterminal;
