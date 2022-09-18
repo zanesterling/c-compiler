@@ -3,7 +3,7 @@
 using namespace std;
 
 int main() {
-  auto fn = "grammar/expr.gram";
+  auto fn = "grammar/test-cases/expr.gram";
   Grammar grammar;
   try {
     grammar = move(Grammar::parse(fn));
@@ -20,7 +20,7 @@ int main() {
 
   vector<LexedToken> tokens;
   try {
-    tokens = grammar.lex("grammar/expr.txt");
+    tokens = grammar.lex("grammar/test-cases/expr.txt");
   } catch (runtime_error e) {
     cout << e.what() << endl;
     return 1;

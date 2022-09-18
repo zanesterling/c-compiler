@@ -166,21 +166,28 @@ vector<LexedToken> Grammar::lex(string filename) {
       for (; i<line.size() && isspace(line[i]); i++);
       if (i==line.size()) break;
 
-      bool found = false;
       for (auto kw : keywords) {
         if (i+kw.second.length() > line.size()) continue;
         if (line.compare(i, kw.second.length(), kw.second) != 0) continue;
         result.push_back(LexedToken{kw.first, kw.second});
         i += kw.second.length();
-        found = true;
+        goto foundToken;
       }
-      if (found) continue;
 
       for (auto tk : tokens) {
-        // TODO: Match regex.
+        regex reg(tk.second);
+        cmatch m;
+        cout << line.substr(i) << endl;
+        if (!regex_search(line.c_str()+i, m, reg, regex_constants::match_continuous)) {
+          continue;
+        }
+        result.push_back(LexedToken{tk.first, m[0]});
+        i += m.length();
+        goto foundToken;
       }
 
       throw lineErr(lineNum, "no match at index " + to_string(i), line);
+   foundToken:;
     }
   }
   return result;
