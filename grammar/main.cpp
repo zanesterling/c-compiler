@@ -3,10 +3,10 @@
 using namespace std;
 
 int main() {
-  auto fn = "grammar/test-cases/expr.gram";
+  auto fn = "test-cases/c.gram";
   Grammar grammar;
   try {
-    grammar = move(Grammar::parse(fn));
+    grammar = move(Grammar::fromFile(fn));
   } catch (runtime_error e) {
     cout << e.what() << endl;
     return 1;
@@ -15,12 +15,13 @@ int main() {
     cout << "grammar \"" << fn << "\" valid!" << endl;
   } else {
     cout << "grammar \"" << fn << "\" invalid :(" << endl;
+    return 1;
   }
   cout << endl;
 
   vector<LexedToken> tokens;
   try {
-    tokens = grammar.lex("grammar/test-cases/expr.txt");
+    tokens = grammar.lex("test-cases/0001_minimal-program.c");
   } catch (runtime_error e) {
     cout << e.what() << endl;
     return 1;

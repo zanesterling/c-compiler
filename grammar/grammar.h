@@ -48,8 +48,9 @@ public:
 
   Grammar() {}
 
-  static Grammar parse(string filename);
+  static Grammar fromFile(string filename);
 
   bool validate();
   vector<LexedToken> lex(string filename);
+  bool parse(vector<LexedToken>& tokens);
 };

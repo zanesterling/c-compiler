@@ -8,7 +8,7 @@ runtime_error lineErr(int lineNum, string msg, string line) {
   return runtime_error(to_string(lineNum)+": " + msg+": \"" + line + "\"");
 }
 
-Grammar Grammar::parse(string filename) {
+Grammar Grammar::fromFile(string filename) {
   ifstream f(filename);
   if (!f.is_open()) {
     throw runtime_error("error opening file: " + filename);
@@ -19,6 +19,7 @@ Grammar Grammar::parse(string filename) {
   size_t lineNum = 0;
   while (getline(f, line)) {
     if (line.size() == 0) continue;
+    if (line.compare(0, 2, "//") == 0) continue;
     if (line[0] == '%') { // Terminal declaration.
       parseTerminal(grammar, line, lineNum);
     } else if (line.find("->") != string::npos) { // Production.
@@ -71,7 +72,7 @@ void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
     auto kw_def = line.substr(2, kw_end-2);
 
     auto i=kw_end+2;
-    for (; i<line.size() && isalpha(line[i]); i++);
+    for (; i<line.size() && (line[i]=='_' || isalpha(line[i])); i++);
     if (i < line.size()) {
       throw lineErr(lineNum, "expected line to end at index " + to_string(i), line);
     }
@@ -79,12 +80,13 @@ void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
     grammar.keywords[name] = kw_def;
   } else {
     // Regex token definition.
+    // TODO: substitute aliases
     size_t regex_end = 1;
     for (; regex_end < line.size() && !isspace(line[regex_end]); regex_end++);
     auto regex = line.substr(1, regex_end-1);
 
     auto i = regex_end+1;
-    for (; i < line.size() && isalpha(line[i]); i++);
+    for (; i<line.size() && (line[i]=='_' || isalpha(line[i])); i++);
     if (i < line.size()) {
       throw lineErr(lineNum, "expected line to end at index " + to_string(i),
                     line);
@@ -106,12 +108,12 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
 
   vector<Minal> body;
   while (i+1 < line.size()) {
-    if (line[i] != ' ' || !isalpha(line[i+1])) {
+    if (line[i]!=' ' || !isalpha(line[i+1])) {
       throw lineErr(lineNum, "expected minal at index " + to_string(i+1), line);
     }
     int minalStart = i+1;
     i++;
-    for (; i < line.size() && isalpha(line[i]); i++);
+    for (; i<line.size() && (line[i]=='_' || isalpha(line[i])); i++);
     auto kind = isupper(line[minalStart])
                 ? MinalKind::terminal : MinalKind::nonterminal;
     body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
@@ -177,7 +179,6 @@ vector<LexedToken> Grammar::lex(string filename) {
       for (auto tk : tokens) {
         regex reg(tk.second);
         cmatch m;
-        cout << line.substr(i) << endl;
         if (!regex_search(line.c_str()+i, m, reg, regex_constants::match_continuous)) {
           continue;
         }
@@ -191,4 +192,8 @@ vector<LexedToken> Grammar::lex(string filename) {
     }
   }
   return result;
+}
+
+bool Grammar::parse(vector<LexedToken>& tokens) {
+  return true;
 }

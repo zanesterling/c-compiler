@@ -1,0 +1,40 @@
+%"int" INT
+%"void" VOID
+
+%"return" RETURN
+
+%"(" LPAREN
+%")" RPAREN
+%"{" LCURL
+%"}" RCURL
+%";" SEMI
+%"," COMMA
+
+// TODO: Protect against partial match of identifiers.
+%[a-zA-Z][a-zA-Z0-9]* ID
+%[0-9]+ INT_CONST
+
+
+func -> type ID LPAREN optarglist RPAREN LCURL stmts RCURL
+
+// TODO: add more types
+type -> INT
+type -> VOID
+
+stmts -> stmt stmts
+stmts ->
+
+optarglist -> arglist
+optarglist -> 
+arglist -> arg COMMA arglist
+arglist -> arg
+arg -> type ID
+
+// TODO: Add more statements.
+stmt -> SEMI
+stmt -> RETURN expr SEMI
+
+// TODO: Add more exprs.
+expr -> INT_CONST
+
+!func
