@@ -16,5 +16,17 @@ int main() {
   } else {
     cout << "grammar \"" << fn << "\" invalid :(" << endl;
   }
+  cout << endl;
+
+  vector<LexedToken> tokens;
+  try {
+    tokens = grammar.lex("grammar/expr.txt");
+  } catch (runtime_error e) {
+    cout << e.what() << endl;
+    return 1;
+  }
+  for (auto tk : tokens) {
+    cout << tk.name << " \"" << tk.contents << "\"" << endl;
+  }
   return 0;
 }

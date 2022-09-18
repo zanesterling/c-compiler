@@ -9,6 +9,12 @@
 
 using namespace std;
 
+class LexedToken {
+ public:
+  const string name;
+  const string contents;
+};
+
 enum MinalKind {
   terminal,
   nonterminal
@@ -30,9 +36,10 @@ public:
 class Grammar {
 public:
   // TODO: Should these be const to avoid bad access?
+  // Maps keyed by token name, contents are matching info.
   map<string, string> aliases;
   map<string, string> keywords;
-  map<string, string> tokens;
+  map<string, string> tokens; // Regex tokens.
 
   set<string> nonterminals;
   vector<Production> productions;
@@ -43,4 +50,5 @@ public:
   static Grammar parse(string filename);
 
   bool validate();
+  vector<LexedToken> lex(string filename);
 };

@@ -149,3 +149,39 @@ bool Grammar::validate() {
   }
   return true;
 }
+
+vector<LexedToken> Grammar::lex(string filename) {
+  ifstream f(filename);
+  if (!f.is_open()) {
+    throw runtime_error("error opening file: " + filename);
+  }
+
+  vector<LexedToken> result;
+  string line;
+  int lineNum = 0;
+  while (getline(f, line)) {
+    int i = 0;
+    lineNum++;
+    while (i<line.size()) {
+      for (; i<line.size() && isspace(line[i]); i++);
+      if (i==line.size()) break;
+
+      bool found = false;
+      for (auto kw : keywords) {
+        if (i+kw.second.length() > line.size()) continue;
+        if (line.compare(i, kw.second.length(), kw.second) != 0) continue;
+        result.push_back(LexedToken{kw.first, kw.second});
+        i += kw.second.length();
+        found = true;
+      }
+      if (found) continue;
+
+      for (auto tk : tokens) {
+        // TODO: Match regex.
+      }
+
+      throw lineErr(lineNum, "no match at index " + to_string(i), line);
+    }
+  }
+  return result;
+}
