@@ -21,7 +21,7 @@ int main() {
 
   vector<LexedToken> tokens;
   try {
-    tokens = grammar.lex("test-cases/0001_minimal-program.c");
+    tokens = grammar.lex("test-cases/0004_initialization.c");
   } catch (runtime_error e) {
     cout << e.what() << endl;
     return 1;

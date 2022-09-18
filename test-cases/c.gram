@@ -3,6 +3,7 @@
 
 %"return" RETURN
 
+%"=" EQ
 %"(" LPAREN
 %")" RPAREN
 %"{" LCURL
@@ -33,6 +34,9 @@ arg -> type ID
 // TODO: Add more statements.
 stmt -> SEMI
 stmt -> RETURN expr SEMI
+stmt -> type ID SEMI
+stmt -> type ID EQ expr SEMI
+stmt -> ID EQ expr SEMI
 
 // TODO: Add more exprs.
 expr -> INT_CONST
