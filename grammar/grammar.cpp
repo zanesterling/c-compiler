@@ -124,27 +124,32 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
   grammar.nonterminals.insert(head);
 }
 
-bool Grammar::validate() {
-  cout << "LEX:" << endl;
-  cout << "\taliases: " << aliases.size() << endl;
-  cout << "\tkeywords: " << keywords.size() << endl;
-  cout << "\ttokens: " << tokens.size() << endl;
-  cout << "GRAMMAR:" << endl;
-  cout << "\tnonterminals: " << nonterminals.size() << endl;
-  cout << "\tproductions: " << productions.size() << endl;
-  cout << "\tstartNonterminal: " << startNonterminal << endl;
-  cout << endl;
-  for (auto production : productions) {
-    cout << production.head << " ->";
-    for (auto minal : production.body) cout << " \"" << minal.heart << '"';
+bool Grammar::validate(bool debug) {
+  if (debug) {
+    cout << "LEX:" << endl;
+    cout << "\taliases: " << aliases.size() << endl;
+    cout << "\tkeywords: " << keywords.size() << endl;
+    cout << "\ttokens: " << tokens.size() << endl;
+    cout << "GRAMMAR:" << endl;
+    cout << "\tnonterminals: " << nonterminals.size() << endl;
+    cout << "\tproductions: " << productions.size() << endl;
+    cout << "\tstartNonterminal: " << startNonterminal << endl;
     cout << endl;
+  }
+  for (auto production : productions) {
+    if (debug) {
+      cout << production.head << " ->";
+      for (auto minal : production.body)
+        cout << " \"" << minal.heart << '"';
+      cout << endl;
+    }
     for (auto minal : production.body) {
       if (minal.kind == MinalKind::terminal) {
-        cout << "terminal:    " << minal.heart << endl;
+        if (debug) cout << "terminal:    " << minal.heart << endl;
         if (keywords.count(minal.heart) == 0 &&
             tokens.count(minal.heart) == 0) return false;
       } else {
-        cout << "nonterminal: " << minal.heart << endl;
+        if (debug) cout << "nonterminal: " << minal.heart << endl;
         if (nonterminals.count(minal.heart) == 0) return false;
       }
     }

@@ -50,7 +50,7 @@ public:
 
   static Grammar fromFile(string filename);
 
-  bool validate();
+  bool validate(bool debug);
   vector<LexedToken> lex(string filename);
   bool parse(vector<LexedToken>& tokens);
 };

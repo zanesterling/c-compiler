@@ -2,6 +2,9 @@
 
 using namespace std;
 
+int test_case(Grammar &grammar, string fn);
+
+
 int main() {
   auto fn = "test-cases/c.gram";
   Grammar grammar;
@@ -11,7 +14,7 @@ int main() {
     cout << e.what() << endl;
     return 1;
   }
-  if (grammar.validate()) {
+  if (grammar.validate(false)) {
     cout << "grammar \"" << fn << "\" valid!" << endl;
   } else {
     cout << "grammar \"" << fn << "\" invalid :(" << endl;
@@ -19,15 +22,24 @@ int main() {
   }
   cout << endl;
 
+  test_case(grammar, "test-cases/0001_minimal-program.c");
+  test_case(grammar, "test-cases/0002_variables.c");
+  test_case(grammar, "test-cases/0003_assignment.c");
+  test_case(grammar, "test-cases/0004_initialization.c");
+}
+
+int test_case(Grammar &grammar, string fn) {
   vector<LexedToken> tokens;
   try {
-    tokens = grammar.lex("test-cases/0004_initialization.c");
+    tokens = grammar.lex(fn);
   } catch (runtime_error e) {
+    cout << "🟥" << fn << endl;
     cout << e.what() << endl;
     return 1;
   }
-  for (auto tk : tokens) {
-    cout << tk.name << " \"" << tk.contents << "\"" << endl;
-  }
+  cout << "🟩" << fn << endl;
+  // for (auto tk : tokens) {
+  //   cout << tk.name << " \"" << tk.contents << "\"" << endl;
+  // }
   return 0;
 }
