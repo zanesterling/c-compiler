@@ -1,5 +1,19 @@
 #include "grammar.h"
 
+// ===== class Production ===== //
+void Production::prettyPrint() {
+  cout << head << " ->" << endl;
+  for (auto body : bodies) {
+    cout << "\t| ";
+    for (auto minal : body)
+      cout << " \"" << minal.heart << '"';
+    cout << endl;
+  }
+  cout << "\t;" << endl;
+}
+
+
+// ===== class Grammar ===== //
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum);
 void parseProduction(Grammar& grammar, string& line, size_t lineNum);
 bool isMinalNameChar(char c);
@@ -55,8 +69,8 @@ bool isMinalNameChar(char c) {
   return c == '_' || isalpha(c);
 }
 
-void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
-  // TODO: Switch to codegen later for kw and regex tokens?
+// TODO: Switch to codegen for kw and regex tokens?
+void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   auto i = 1;
   for (; i<line.size() && isMinalNameChar(line[i]); i++);
   if (i==1) {
@@ -85,17 +99,24 @@ void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
   }
 }
 
+// TODO: Allow multiline piped productions.
+// TODO: Add codegen for productions.
 void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
   int i = 0;
   for (; i < line.size() && isalpha(line[i]); i++);
   auto head = line.substr(0, i);
 
+  if (grammar.productions.count(head) != 0) {
+    throw lineErr(lineNum, "redefined nonterminal: \""+head+"\"", line);
+  }
   if (line.compare(i, 3, " ->") != 0) {
     throw lineErr(lineNum, "expected \" ->\" at index " + to_string(i), line);
   }
   i += 3;
 
-  vector<Minal> body;
+  vector<vector<Minal>> bodies;
+  vector<Minal> curBody;
+  string code;
   while (i < line.size()) {
     if (line[i]!=' ') {
       throw lineErr(lineNum, "expected ' ' at index " + to_string(i), line);
@@ -107,19 +128,20 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
       throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
     }
     if (line[i] == '|') {
-      grammar.productions.push_back(Production{head, body});
-      body.clear();
+      bodies.push_back(curBody);
+      curBody.clear();
       i++;
     } else {
       int minalStart = i;
       for (; i<line.size() && isMinalNameChar(line[i]); i++);
       auto kind = isupper(line[minalStart])
                   ? MinalKind::terminal : MinalKind::nonterminal;
-      body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
+      curBody.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
     }
   }
 
-  grammar.productions.push_back(Production{head, body});
+  bodies.push_back(curBody);
+  grammar.productions.emplace(head, Production{head, bodies, code});
   grammar.nonterminals.insert(head);
 }
 
@@ -135,23 +157,25 @@ bool Grammar::validate(bool debug) {
     cout << "\tstartNonterminal: " << startNonterminal << endl;
     cout << endl;
   }
-  for (auto production : productions) {
-    if (debug) {
-      cout << production.head << " ->";
-      for (auto minal : production.body)
-        cout << " \"" << minal.heart << '"';
-      cout << endl;
-    }
-    for (auto minal : production.body) {
-      if (minal.kind == MinalKind::terminal) {
-        if (debug) cout << "terminal:    " << minal.heart << endl;
-        if (keywords.count(minal.heart) == 0 &&
-            tokens.count(minal.heart) == 0) return false;
-      } else {
-        if (debug) cout << "nonterminal: " << minal.heart << endl;
-        if (nonterminals.count(minal.heart) == 0) return false;
+  for (auto [head, production] : productions) {
+    DEBUG(production.prettyPrint());
+    for (auto body : production.bodies) {
+      for (auto minal : body) {
+        if (minal.kind == MinalKind::terminal) {
+          if (debug)
+            cout << "terminal:    " << minal.heart << endl;
+          if (keywords.count(minal.heart) == 0 &&
+              tokens.count(minal.heart) == 0)
+            return false;
+        } else {
+          if (debug)
+            cout << "nonterminal: " << minal.heart << endl;
+          if (nonterminals.count(minal.heart) == 0)
+            return false;
+        }
       }
     }
+
   }
   return true;
 }
@@ -198,6 +222,7 @@ vector<LexedToken> Grammar::lex(string filename) {
   return result;
 }
 
+// TODO: Implement.
 bool Grammar::parse(const vector<LexedToken>& tokens) {
   return true;
 }

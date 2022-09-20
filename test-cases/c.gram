@@ -19,11 +19,9 @@
 func -> type ID LPAREN optarglist RPAREN LCURL stmts RCURL
 
 // TODO: add more types
-type -> INT
-type -> VOID
+type -> INT | VOID
 
-stmts -> stmt stmts
-stmts ->
+stmts -> stmt stmts |
 
 optarglist -> arglist |
 arglist -> arg COMMA arglist | arg

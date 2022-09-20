@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "debug.h"
+
 using namespace std;
 
 class LexedToken {
@@ -30,8 +32,13 @@ public:
 
 class Production {
 public:
-  std::string head;
-  vector<Minal> body;
+  const string head;
+  const vector<vector<Minal>> bodies;
+  const string code;
+
+  Production& operator=(const Production&) = delete;
+
+  void prettyPrint();
 };
 
 class Grammar {
@@ -43,7 +50,7 @@ public:
   map<string, string> tokens; // Regex tokens.
 
   set<string> nonterminals;
-  vector<Production> productions;
+  map<string, Production> productions;
   string startNonterminal;
 
   Grammar() {}

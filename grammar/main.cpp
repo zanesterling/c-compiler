@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "grammar.h"
 
 using namespace std;
@@ -38,8 +39,8 @@ int test_case(Grammar &grammar, string fn) {
     return 1;
   }
   cout << "🟩" << fn << endl;
-  // for (auto tk : tokens) {
-  //   cout << tk.name << " \"" << tk.contents << "\"" << endl;
-  // }
+  for (auto tk : tokens) {
+    DEBUG(cout << tk.name << " \"" << tk.contents << "\"" << endl);
+  }
   return 0;
 }
