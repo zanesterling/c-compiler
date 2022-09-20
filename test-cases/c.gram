@@ -25,18 +25,12 @@ type -> VOID
 stmts -> stmt stmts
 stmts ->
 
-optarglist -> arglist
-optarglist -> 
-arglist -> arg COMMA arglist
-arglist -> arg
+optarglist -> arglist |
+arglist -> arg COMMA arglist | arg
 arg -> type ID
 
 // TODO: Add more statements.
-stmt -> SEMI
-stmt -> RETURN expr SEMI
-stmt -> type ID SEMI
-stmt -> type ID EQ expr SEMI
-stmt -> ID EQ expr SEMI
+stmt -> SEMI | RETURN expr SEMI | type ID SEMI | type ID EQ expr SEMI | ID EQ expr SEMI
 
 // TODO: Add more exprs.
 expr -> INT_CONST

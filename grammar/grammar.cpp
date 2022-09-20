@@ -2,7 +2,7 @@
 
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum);
 void parseProduction(Grammar& grammar, string& line, size_t lineNum);
-bool isTerminalNameChar(char c);
+bool isMinalNameChar(char c);
 
 
 runtime_error lineErr(int lineNum, string msg, string line) {
@@ -51,14 +51,14 @@ Grammar Grammar::fromFile(string filename) {
   return grammar;
 }
 
-bool isTerminalNameChar(char c) {
+bool isMinalNameChar(char c) {
   return c == '_' || isalpha(c);
 }
 
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
   // TODO: Switch to codegen later for kw and regex tokens?
   auto i = 1;
-  for (; i<line.size() && isTerminalNameChar(line[i]); i++);
+  for (; i<line.size() && isMinalNameChar(line[i]); i++);
   if (i==1) {
     throw lineErr(lineNum, "expected terminal name", line);
   }
@@ -88,7 +88,7 @@ void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
 void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
   int i = 0;
   for (; i < line.size() && isalpha(line[i]); i++);
-  auto headEnd = i;
+  auto head = line.substr(0, i);
 
   if (line.compare(i, 3, " ->") != 0) {
     throw lineErr(lineNum, "expected \" ->\" at index " + to_string(i), line);
@@ -96,19 +96,29 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
   i += 3;
 
   vector<Minal> body;
-  while (i+1 < line.size()) {
-    if (line[i]!=' ' || !isalpha(line[i+1])) {
-      throw lineErr(lineNum, "expected minal at index " + to_string(i+1), line);
+  while (i < line.size()) {
+    if (line[i]!=' ') {
+      throw lineErr(lineNum, "expected ' ' at index " + to_string(i), line);
     }
-    int minalStart = i+1;
-    i++;
-    for (; i<line.size() && (line[i]=='_' || isalpha(line[i])); i++);
-    auto kind = isupper(line[minalStart])
-                ? MinalKind::terminal : MinalKind::nonterminal;
-    body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
+    for (; i<line.size() && isspace(line[i]); i++);
+    if (i == line.size()) break;
+
+    if (!isMinalNameChar(line[i]) && line[i] != '|') {
+      throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+    }
+    if (line[i] == '|') {
+      grammar.productions.push_back(Production{head, body});
+      body.clear();
+      i++;
+    } else {
+      int minalStart = i;
+      for (; i<line.size() && isMinalNameChar(line[i]); i++);
+      auto kind = isupper(line[minalStart])
+                  ? MinalKind::terminal : MinalKind::nonterminal;
+      body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
+    }
   }
 
-  auto head = line.substr(0, headEnd);
   grammar.productions.push_back(Production{head, body});
   grammar.nonterminals.insert(head);
 }
