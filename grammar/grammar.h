@@ -54,7 +54,6 @@ public:
   map<string, string> keywords;
   map<string, string> tokens; // Regex tokens.
 
-  set<string> nonterminals;
   map<string, Production> productions;
   string startNonterminal;
 

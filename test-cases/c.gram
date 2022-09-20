@@ -16,9 +16,7 @@
 %INT_CONST [0-9]+
 
 
-func ->
-     | type ID LPAREN optarglist RPAREN LCURL stmts RCURL
-     ;
+func -> type ID LPAREN optarglist RPAREN LCURL stmts RCURL
 
 // TODO: add more types
 type ->

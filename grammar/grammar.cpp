@@ -2,14 +2,21 @@
 
 // ===== class Production ===== //
 void Production::prettyPrint() {
-  cout << head << " ->" << endl;
-  for (auto body : bodies) {
-    cout << "\t| ";
-    for (auto minal : body)
-      cout << " \"" << minal.heart << '"';
+  assert(bodies.size() != 0);
+  if (bodies.size() == 1) {
+    cout << head << " ->";
+    for (auto minal : bodies[0]) cout << " \"" << minal.heart << '"';
     cout << endl;
+  } else {
+    cout << head << " ->" << endl;
+    for (auto body : bodies) {
+      cout << "\t| ";
+      for (auto minal : body)
+        cout << " \"" << minal.heart << '"';
+      cout << endl;
+    }
+    cout << "\t;" << endl;
   }
-  cout << "\t;" << endl;
 }
 
 
@@ -38,8 +45,8 @@ Grammar Grammar::fromFile(string filename) {
   string line;
   size_t lineNum = 0;
   while (getline(f, line)) {
-    if (line.size() == 0) continue;
-    if (line.compare(0, 2, "//") == 0) continue;
+    if (line.size() == 0) goto nextline;
+    if (line.compare(0, 2, "//") == 0) goto nextline;
     if (line[0] == '%') { // Terminal declaration.
       parseTerminal(grammar, line, lineNum);
     } else if (line.find("->") != string::npos) { // Production.
@@ -57,13 +64,14 @@ Grammar Grammar::fromFile(string filename) {
         }
       }
       auto s = line.substr(1);
-      if (grammar.nonterminals.count(s) == 0) {
+      if (grammar.productions.count(s) == 0) {
         throw lineErr(lineNum, "nonterminal not recognized", line);
       }
       grammar.startNonterminal = s;
     } else {
       throw lineErr(lineNum, "bad line layout", line);
     }
+ nextline:
     lineNum++;
   }
 
@@ -149,7 +157,6 @@ optional<string> parseProdMinal(Grammar& grammar, string& line, size_t& lineNum,
   return optional(line.substr(minalStart, i-minalStart));
 }
 
-// TODO: Allow single line productions again.
 // TODO: Add codegen for productions.
 void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f) {
   int i = 0;
@@ -157,15 +164,27 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   auto head = line.substr(0, i);
 
   if (grammar.productions.count(head) != 0) {
-    throw lineErr(lineNum, "redefined nonterminal: \""+head+"\"", line);
+    throw lineErr(lineNum, "redefined nonterminal: \"" + head + "\"", line);
   }
   expectString(" ->", lineNum, line, i);
-  i += 3;
 
-  if (i < line.size()) {
-    throw lineErr(lineNum, "expected line to end at index " + to_string(i), line);
+  if (i < line.size()) { // SINGLE LINE PRODUCTION
+    vector<Minal> body;
+    string code;
+    while (i < line.size()) {
+      auto minalOpt = parseProdMinal(grammar, line, lineNum, i);
+      if (minalOpt.has_value()) {
+        auto heart = minalOpt.value();
+        body.push_back(Minal(Minal::getKind(heart), heart));
+      } else if (i < line.size()) {
+        throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+      }
+    }
+    grammar.productions.emplace(head, Production{head, {body}, code});
+    return;
   }
 
+  // MULTI-LINE PRODUCTION
   vector<vector<Minal>> bodies;
   string code;
   vector<Minal> body;
@@ -198,7 +217,6 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
     }
   }
   grammar.productions.emplace(head, Production{head, bodies, code});
-  grammar.nonterminals.insert(head);
 }
 
 bool Grammar::validate() {
@@ -208,7 +226,6 @@ bool Grammar::validate() {
     cout << "\tkeywords: " << keywords.size() << endl;
     cout << "\ttokens: " << tokens.size() << endl;
     cout << "GRAMMAR:" << endl;
-    cout << "\tnonterminals: " << nonterminals.size() << endl;
     cout << "\tproductions: " << productions.size() << endl;
     cout << "\tstartNonterminal: " << startNonterminal << endl;
     cout << endl;
@@ -224,7 +241,7 @@ bool Grammar::validate() {
             return false;
         } else {
           DEBUG(cout << "nonterminal: " << minal.heart << endl);
-          if (nonterminals.count(minal.heart) == 0)
+          if (productions.count(minal.heart) == 0)
             return false;
         }
       }
@@ -243,8 +260,8 @@ vector<LexedToken> Grammar::lex(string filename) {
   string line;
   int lineNum = 0;
   while (getline(f, line)) {
-    int i = 0;
     lineNum++;
+    int i = 0;
     while (i<line.size()) {
       for (; i<line.size() && isspace(line[i]); i++);
       if (i==line.size()) break;
