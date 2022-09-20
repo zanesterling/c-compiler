@@ -15,7 +15,7 @@ void Production::prettyPrint() {
 
 // ===== class Grammar ===== //
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum);
-void parseProduction(Grammar& grammar, string& line, size_t lineNum);
+void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f);
 bool isMinalNameChar(char c);
 
 
@@ -38,7 +38,7 @@ Grammar Grammar::fromFile(string filename) {
     if (line[0] == '%') { // Terminal declaration.
       parseTerminal(grammar, line, lineNum);
     } else if (line.find("->") != string::npos) { // Production.
-      parseProduction(grammar, line, lineNum);
+      parseProduction(grammar, line, lineNum, f);
     } else if (line[0] == '!') { // Set root nonterminal.
       if (line.size() == 1) {
         throw lineErr(lineNum, "empty start nonterminal", line);
@@ -99,9 +99,9 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   }
 }
 
-// TODO: Allow multiline piped productions.
+// TODO: Allow single line productions again.
 // TODO: Add codegen for productions.
-void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
+void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f) {
   int i = 0;
   for (; i < line.size() && isalpha(line[i]); i++);
   auto head = line.substr(0, i);
@@ -114,33 +114,46 @@ void parseProduction(Grammar& grammar, string& line, size_t lineNum) {
   }
   i += 3;
 
-  vector<vector<Minal>> bodies;
-  vector<Minal> curBody;
-  string code;
-  while (i < line.size()) {
-    if (line[i]!=' ') {
-      throw lineErr(lineNum, "expected ' ' at index " + to_string(i), line);
-    }
-    for (; i<line.size() && isspace(line[i]); i++);
-    if (i == line.size()) break;
-
-    if (!isMinalNameChar(line[i]) && line[i] != '|') {
-      throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
-    }
-    if (line[i] == '|') {
-      bodies.push_back(curBody);
-      curBody.clear();
-      i++;
-    } else {
-      int minalStart = i;
-      for (; i<line.size() && isMinalNameChar(line[i]); i++);
-      auto kind = isupper(line[minalStart])
-                  ? MinalKind::terminal : MinalKind::nonterminal;
-      curBody.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
-    }
+  if (i<line.size()) {
+    throw lineErr(lineNum, "expected line to end at index " + to_string(i), line);
   }
 
-  bodies.push_back(curBody);
+  vector<vector<Minal>> bodies;
+  string code;
+  vector<Minal> body;
+  while (true) {
+    lineNum++;
+    if (!getline(f, line)) {
+      throw lineErr(lineNum, "encountered EOF inside production", line);
+    }
+    for (i=0; i<line.size() && isspace(line[i]); i++);
+
+    if (line[i] == ';') { // END OF PRODUCTION
+      // TODO: Check if there's a code block.
+      break;
+    } else if (line[i] == '|') { // NEW BODY
+      i++;
+      vector<Minal> &body = bodies.emplace_back();
+      while (i < line.size()) {
+        if (line[i] != ' ') {
+          throw lineErr(lineNum, "expected ' ' at index " + to_string(i), line);
+        }
+        for (; i < line.size() && isspace(line[i]); i++);
+        if (i == line.size()) break;
+
+        if (!isMinalNameChar(line[i])) {
+          throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+        }
+        int minalStart = i;
+        for (; i<line.size() && isMinalNameChar(line[i]); i++);
+        auto kind = isupper(line[minalStart])
+                    ? MinalKind::terminal : MinalKind::nonterminal;
+        body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
+      }
+    } else {
+      throw lineErr(lineNum, "expected '|' or ';' at index " + to_string(i), line);
+    }
+  }
   grammar.productions.emplace(head, Production{head, bodies, code});
   grammar.nonterminals.insert(head);
 }
