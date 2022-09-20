@@ -21,6 +21,8 @@ void expectString(string s,     int lineNum, string& line, int& i);
 void expectChar  (char c,       int lineNum, string& line, int& i);
 void expectOneof (string chars, int lineNum, string& line, int& i);
 void skipSomeSpaces(int lineNum, string& line, int& i);
+void skipAnySpaces(int lineNum, string& line, int& i);
+
 
 runtime_error lineErr(int lineNum, string msg, string line) {
   return runtime_error(to_string(lineNum)+": " + msg+": \"" + line + "\"");
@@ -103,7 +105,11 @@ void expectOneof(string s, int lineNum, string &line, int &i) {
 
 void skipSomeSpaces(int lineNum, string &line, int &i) {
   expectChar(' ', lineNum, line, i);
-  for (; i < line.size() && isspace(line[i]); i++);
+  skipAnySpaces(lineNum, line, i);
+}
+
+void skipAnySpaces(int lineNum, string &line, int &i) {
+  for (; i<line.size() && isspace(line[i]); i++);
 }
 
 // TODO: Switch to codegen for kw and regex tokens?
@@ -133,6 +139,16 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   }
 }
 
+optional<string> parseProdMinal(Grammar& grammar, string& line, size_t& lineNum, int& i) {
+  skipAnySpaces(lineNum, line, i);
+  if (i>=line.size() || !isMinalNameChar(line[i])) {
+    return optional<string>();
+  }
+  int minalStart = i;
+  for (; i<line.size() && isMinalNameChar(line[i]); i++);
+  return optional(line.substr(minalStart, i-minalStart));
+}
+
 // TODO: Allow single line productions again.
 // TODO: Add codegen for productions.
 void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f) {
@@ -146,7 +162,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   expectString(" ->", lineNum, line, i);
   i += 3;
 
-  if (i<line.size()) {
+  if (i < line.size()) {
     throw lineErr(lineNum, "expected line to end at index " + to_string(i), line);
   }
 
@@ -170,14 +186,12 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
         skipSomeSpaces(lineNum, line, i);
         if (i == line.size()) break;
 
-        if (!isMinalNameChar(line[i])) {
+        auto minalOpt = parseProdMinal(grammar, line, lineNum, i);
+        if (!minalOpt.has_value()) {
           throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
         }
-        int minalStart = i;
-        for (; i<line.size() && isMinalNameChar(line[i]); i++);
-        auto kind = isupper(line[minalStart])
-                    ? MinalKind::terminal : MinalKind::nonterminal;
-        body.push_back(Minal(kind, line.substr(minalStart, i-minalStart)));
+        auto heart = minalOpt.value();
+        body.push_back(Minal(Minal::getKind(heart), heart));
       }
     } else {
       throw lineErr(lineNum, "expected '|' or ';' at index " + to_string(i), line);
@@ -187,8 +201,8 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   grammar.nonterminals.insert(head);
 }
 
-bool Grammar::validate(bool debug) {
-  if (debug) {
+bool Grammar::validate() {
+  DEBUG({
     cout << "LEX:" << endl;
     cout << "\taliases: " << aliases.size() << endl;
     cout << "\tkeywords: " << keywords.size() << endl;
@@ -198,20 +212,18 @@ bool Grammar::validate(bool debug) {
     cout << "\tproductions: " << productions.size() << endl;
     cout << "\tstartNonterminal: " << startNonterminal << endl;
     cout << endl;
-  }
+    });
   for (auto [head, production] : productions) {
     DEBUG(production.prettyPrint());
     for (auto body : production.bodies) {
       for (auto minal : body) {
         if (minal.kind == MinalKind::terminal) {
-          if (debug)
-            cout << "terminal:    " << minal.heart << endl;
+          DEBUG(cout << "terminal:    " << minal.heart << endl);
           if (keywords.count(minal.heart) == 0 &&
               tokens.count(minal.heart) == 0)
             return false;
         } else {
-          if (debug)
-            cout << "nonterminal: " << minal.heart << endl;
+          DEBUG(cout << "nonterminal: " << minal.heart << endl);
           if (nonterminals.count(minal.heart) == 0)
             return false;
         }

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <regex>
 #include <set>
 #include <stdexcept>
@@ -28,6 +29,10 @@ public:
   const std::string heart;
 
   Minal(MinalKind kind, std::string heart) : kind(kind), heart(heart) {}
+
+  static MinalKind getKind(string heart) {
+    return isupper(heart[0]) ? terminal : nonterminal;
+  }
 };
 
 class Production {
@@ -57,7 +62,7 @@ public:
 
   static Grammar fromFile(string filename);
 
-  bool validate(bool debug);
+  bool validate();
   vector<LexedToken> lex(string filename);
   bool parse(const vector<LexedToken>& tokens);
 };
