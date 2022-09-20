@@ -5,9 +5,12 @@ CXX ?= g++ $(FLAGS)
 
 CXXFLAGS=-std=c++17
 
-.PHONY: run
+.PHONY: run clean
 run: a.out
 	./a.out
+
+clean:
+	rm -f a.out $(objects)
 
 a.out: $(objects)
 	g++ $(FLAGS) $(objects)
