@@ -52,5 +52,5 @@ public:
 
   bool validate(bool debug);
   vector<LexedToken> lex(string filename);
-  bool parse(vector<LexedToken>& tokens);
+  bool parse(const vector<LexedToken>& tokens);
 };

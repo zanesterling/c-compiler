@@ -2,6 +2,7 @@
 
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum);
 void parseProduction(Grammar& grammar, string& line, size_t lineNum);
+bool isTerminalNameChar(char c);
 
 
 runtime_error lineErr(int lineNum, string msg, string line) {
@@ -50,48 +51,36 @@ Grammar Grammar::fromFile(string filename) {
   return grammar;
 }
 
+bool isTerminalNameChar(char c) {
+  return c == '_' || isalpha(c);
+}
+
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum) {
   // TODO: Switch to codegen later for kw and regex tokens?
-  if (isalpha(line[1]) && isupper(line[1])) {
-    // Alias definition.
-    size_t alias_end = 1;
-    for (; alias_end < line.size() && !isspace(line[alias_end]); alias_end++);
-    string alias = line.substr(1, alias_end-1);
+  auto i = 1;
+  for (; i<line.size() && isTerminalNameChar(line[i]); i++);
+  if (i==1) {
+    throw lineErr(lineNum, "expected terminal name", line);
+  }
+  auto name = line.substr(1, i-1);
 
-    size_t regex_start = alias_end;
-    for (; regex_start < line.size() && isspace(line[regex_start]); regex_start++);
-    string regex = line.substr(regex_start);
+  if (i >= line.size() || !isspace(line[i])) {
+    throw lineErr(lineNum, "expected terminal at index " + to_string(i), line);
+  }
+  for (; i<line.size() && isspace(line[i]); i++);
 
-    grammar.aliases[alias] = regex;
-  } else if (line[1] == '"') {
-    // Keyword definition.
-    auto kw_end = line.find('"', 2);
-    if (kw_end == string::npos) {
+  if (name[0] == '_') { // ALIAS
+    grammar.aliases[name] = line.substr(i + 1);
+  } else if (line[i] == '"') { // KEYWORD
+    auto kwStart = i+1;
+    auto kwEnd = line.find('"', kwStart);
+    if (kwEnd == string::npos) {
       throw lineErr(lineNum, "unclosed quote for keyword", line);
     }
-    auto kw_def = line.substr(2, kw_end-2);
-
-    auto i=kw_end+2;
-    for (; i<line.size() && (line[i]=='_' || isalpha(line[i])); i++);
-    if (i < line.size()) {
-      throw lineErr(lineNum, "expected line to end at index " + to_string(i), line);
-    }
-    auto name = line.substr(kw_end+2, i-(kw_end+1));
-    grammar.keywords[name] = kw_def;
-  } else {
-    // Regex token definition.
+    grammar.keywords[name] = line.substr(kwStart, kwEnd-kwStart);
+  } else { // REGEX
     // TODO: substitute aliases
-    size_t regex_end = 1;
-    for (; regex_end < line.size() && !isspace(line[regex_end]); regex_end++);
-    auto regex = line.substr(1, regex_end-1);
-
-    auto i = regex_end+1;
-    for (; i<line.size() && (line[i]=='_' || isalpha(line[i])); i++);
-    if (i < line.size()) {
-      throw lineErr(lineNum, "expected line to end at index " + to_string(i),
-                    line);
-    }
-    auto name = line.substr(regex_end+1, i-(regex_end+1));
+    auto regex = line.substr(i);
     grammar.tokens[name] = regex;
   }
 }
@@ -173,21 +162,21 @@ vector<LexedToken> Grammar::lex(string filename) {
       for (; i<line.size() && isspace(line[i]); i++);
       if (i==line.size()) break;
 
-      for (auto kw : keywords) {
-        if (i+kw.second.length() > line.size()) continue;
-        if (line.compare(i, kw.second.length(), kw.second) != 0) continue;
-        result.push_back(LexedToken{kw.first, kw.second});
-        i += kw.second.length();
+      for (auto [name, kw] : keywords) {
+        if (i+kw.length() > line.size()) continue;
+        if (line.compare(i, kw.length(), kw) != 0) continue;
+        result.push_back(LexedToken{name, kw});
+        i += kw.length();
         goto foundToken;
       }
 
-      for (auto tk : tokens) {
-        regex reg(tk.second);
+      for (auto [name, rgText] : tokens) {
+        regex reg(rgText);
         cmatch m;
         if (!regex_search(line.c_str()+i, m, reg, regex_constants::match_continuous)) {
           continue;
         }
-        result.push_back(LexedToken{tk.first, m[0]});
+        result.push_back(LexedToken{name, m[0]});
         i += m.length();
         goto foundToken;
       }
@@ -199,6 +188,6 @@ vector<LexedToken> Grammar::lex(string filename) {
   return result;
 }
 
-bool Grammar::parse(vector<LexedToken>& tokens) {
+bool Grammar::parse(const vector<LexedToken>& tokens) {
   return true;
 }
