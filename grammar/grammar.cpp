@@ -17,7 +17,10 @@ void Production::prettyPrint() {
 void parseTerminal(Grammar& grammar, string& line, size_t lineNum);
 void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f);
 bool isMinalNameChar(char c);
-
+void expectString(string s,     int lineNum, string& line, int& i);
+void expectChar  (char c,       int lineNum, string& line, int& i);
+void expectOneof (string chars, int lineNum, string& line, int& i);
+void skipSomeSpaces(int lineNum, string& line, int& i);
 
 runtime_error lineErr(int lineNum, string msg, string line) {
   return runtime_error(to_string(lineNum)+": " + msg+": \"" + line + "\"");
@@ -69,6 +72,40 @@ bool isMinalNameChar(char c) {
   return c == '_' || isalpha(c);
 }
 
+void expectString(string s, int lineNum, string &line, int &i) {
+  if (line.compare(i, s.length(), s) != 0) {
+    throw lineErr(lineNum, "expected \"" + s + "\" at index " + to_string(i),
+                  line);
+  }
+  i += s.length();
+}
+
+void expectChar(char c, int lineNum, string &line, int &i) {
+  if (i >= line.size() || line[i] != c) {
+    auto msg = "expected '" + to_string(c) + "' at index " + to_string(i);
+    throw lineErr(lineNum, msg, line);
+  }
+  i++;
+}
+
+void expectOneof(string s, int lineNum, string &line, int &i) {
+  if (i >= line.size() || s.find(line[i]) == string::npos) {
+    string msg = "expected one of [";
+    for (int j=0; j<s.size(); j++) {
+      if (j>0) msg += ", ";
+      msg += "'" + to_string(s[j]) + "'";
+    }
+    msg += "] at index " + to_string(i);
+    throw lineErr(lineNum, msg, line);
+  }
+  i++;
+}
+
+void skipSomeSpaces(int lineNum, string &line, int &i) {
+  expectChar(' ', lineNum, line, i);
+  for (; i < line.size() && isspace(line[i]); i++);
+}
+
 // TODO: Switch to codegen for kw and regex tokens?
 void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   auto i = 1;
@@ -78,10 +115,7 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   }
   auto name = line.substr(1, i-1);
 
-  if (i >= line.size() || !isspace(line[i])) {
-    throw lineErr(lineNum, "expected terminal at index " + to_string(i), line);
-  }
-  for (; i<line.size() && isspace(line[i]); i++);
+  skipSomeSpaces(lineNum, line, i);
 
   if (name[0] == '_') { // ALIAS
     grammar.aliases[name] = line.substr(i + 1);
@@ -109,9 +143,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   if (grammar.productions.count(head) != 0) {
     throw lineErr(lineNum, "redefined nonterminal: \""+head+"\"", line);
   }
-  if (line.compare(i, 3, " ->") != 0) {
-    throw lineErr(lineNum, "expected \" ->\" at index " + to_string(i), line);
-  }
+  expectString(" ->", lineNum, line, i);
   i += 3;
 
   if (i<line.size()) {
@@ -135,10 +167,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
       i++;
       vector<Minal> &body = bodies.emplace_back();
       while (i < line.size()) {
-        if (line[i] != ' ') {
-          throw lineErr(lineNum, "expected ' ' at index " + to_string(i), line);
-        }
-        for (; i < line.size() && isspace(line[i]); i++);
+        skipSomeSpaces(lineNum, line, i);
         if (i == line.size()) break;
 
         if (!isMinalNameChar(line[i])) {
@@ -188,7 +217,6 @@ bool Grammar::validate(bool debug) {
         }
       }
     }
-
   }
   return true;
 }
