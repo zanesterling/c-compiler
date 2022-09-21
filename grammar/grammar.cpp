@@ -2,22 +2,9 @@
 
 // ===== class Production ===== //
 void Production::prettyPrint() {
-  assert(bodies.size() != 0);
-  if (bodies.size() == 1) {
-    cout << head << " ->";
-    for (auto minal : bodies[0]) cout << " \"" << minal.heart << '"';
-    cout << " " << code;
-    cout << endl;
-  } else {
-    cout << head << " ->" << endl;
-    for (auto body : bodies) {
-      cout << "\t| ";
-      for (auto minal : body)
-        cout << " \"" << minal.heart << '"';
-      cout << endl;
-    }
-    cout << "\t; " << code << endl;
-  }
+  for (auto minal : body) cout << " \"" << minal.heart << '"';
+  if (code.length() > 0) cout << " " << code;
+  cout << endl;
 }
 
 
@@ -147,7 +134,7 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   }
 }
 
-// TODO: Consider allowing multi-line blocks.
+// TODO: Consider allowing multi-line code blocks.
 string parseCodeBlock(string &line, size_t &lineNum, int &i) {
   expectChar('{', lineNum, line, i);
   string s = "{";
@@ -173,11 +160,23 @@ string parseCodeBlock(string &line, size_t &lineNum, int &i) {
   return s;
 }
 
-vector<Minal> parseProdBody(string& line, size_t lineNum, int& i) {
+pair<vector<Minal>, string> parseProdBody(string& line, size_t lineNum, int& i) {
   vector<Minal> body;
+  string code;
   while (i < line.size()) {
     skipSomeSpaces(lineNum, line, i);
-    if (i >= line.size() || !isMinalNameChar(line[i])) break;
+    if (i >= line.size()) break;
+    if (line[i] == '{') {
+      code = parseCodeBlock(line, lineNum, i);
+      skipAnySpaces(lineNum, line, i);
+      if (i<line.size()) {
+        throw lineErr(lineNum, "expected EOL after code block", line);
+      }
+      break;
+    }
+    if (!isMinalNameChar(line[i])) {
+      throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+    }
 
     // Parse a minal.
     int minalStart = i;
@@ -185,7 +184,7 @@ vector<Minal> parseProdBody(string& line, size_t lineNum, int& i) {
     auto heart = line.substr(minalStart, i - minalStart);
     body.emplace_back(Minal::getKind(heart), heart);
   }
-  return body;
+  return pair(body, code);
 }
 
 void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f) {
@@ -200,20 +199,14 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
 
   if (i < line.size()) { // SINGLE LINE PRODUCTION
     DEBUG(cout << "single line production" << endl);
-    vector<Minal> body = parseProdBody(line, lineNum, i);
+    auto [body, code] = parseProdBody(line, lineNum, i);
     skipAnySpaces(lineNum, line, i);
-    string code;
-    if (i < line.size() && line[i] == '{') {
-      code = parseCodeBlock(line, lineNum, i);
-    }
-    grammar.productions.emplace(head, Production{head, {body}, code});
+    grammar.productions[head].push_back(Production{head, body, code});
     return;
   }
 
   // MULTI-LINE PRODUCTION
-  vector<vector<Minal>> bodies;
-  string code;
-  vector<Minal> body;
+  vector<Production> productions;
   while (true) {
     DEBUG(cout << "multi line production" << endl);
     lineNum++;
@@ -224,22 +217,20 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
     skipAnySpaces(lineNum, line, i);
 
     if (line[i] == ';') { // END OF PRODUCTION
-      skipAnySpaces(lineNum, line, ++i);
-      if (i < line.size()) {
-        code = parseCodeBlock(line, lineNum, i);
+      i++;
+      if (i<line.size()) {
+        throw lineErr(lineNum, "expected EOL at index " + to_string(i), line);
       }
       break;
     } else if (line[i] == '|') { // NEW BODY
       i++;
-      bodies.push_back(parseProdBody(line, lineNum, i));
-      if (i < line.size()) {
-        throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
-      }
+      auto [body, code] = parseProdBody(line, lineNum, i);
+      productions.push_back(Production{head, body, code});
     } else {
       throw lineErr(lineNum, "expected '|' or ';' at index " + to_string(i), line);
     }
   }
-  grammar.productions.emplace(head, Production{head, bodies, code});
+  grammar.productions.emplace(head, productions);
 }
 
 bool Grammar::validate() {
@@ -253,10 +244,10 @@ bool Grammar::validate() {
     cout << "\tstartNonterminal: " << startNonterminal << endl;
     cout << endl;
     });
-  for (auto [head, production] : productions) {
-    DEBUG(production.prettyPrint());
-    for (auto body : production.bodies) {
-      for (auto minal : body) {
+  for (auto [_, ps] : productions) {
+    for (auto production : ps) {
+      DEBUG(production.prettyPrint());
+      for (auto minal : production.body) {
         if (minal.kind == MinalKind::terminal) {
           DEBUG(cout << "terminal:    " << minal.heart << endl);
           if (keywords.count(minal.heart) == 0 &&

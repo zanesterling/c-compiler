@@ -38,7 +38,7 @@ public:
 class Production {
 public:
   const string head;
-  const vector<vector<Minal>> bodies;
+  const vector<Minal> body;
   const string code;
 
   Production& operator=(const Production&) = delete;
@@ -54,7 +54,7 @@ public:
   map<string, string> keywords;
   map<string, string> tokens; // Regex tokens.
 
-  map<string, Production> productions;
+  map<string, vector<Production>> productions;
   string startNonterminal;
 
   Grammar() {}
