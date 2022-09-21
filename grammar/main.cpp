@@ -23,10 +23,14 @@ int main() {
   }
   cout << endl;
 
-  test_case(grammar, "test-cases/0001_minimal-program.c");
-  test_case(grammar, "test-cases/0002_variables.c");
-  test_case(grammar, "test-cases/0003_assignment.c");
-  test_case(grammar, "test-cases/0004_initialization.c");
+  ofstream f("parser_out.c");
+  grammar.generate(f);
+  f.close();
+
+  // test_case(grammar, "test-cases/0001_minimal-program.c");
+  // test_case(grammar, "test-cases/0002_variables.c");
+  // test_case(grammar, "test-cases/0003_assignment.c");
+  // test_case(grammar, "test-cases/0004_initialization.c");
 }
 
 int test_case(Grammar &grammar, string fn) {

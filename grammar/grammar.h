@@ -63,5 +63,6 @@ public:
 
   bool validate();
   vector<LexedToken> lex(string filename);
-  bool parse(const vector<LexedToken>& tokens);
+  void generate(ofstream& f);
+  // bool parse(const vector<LexedToken>& tokens);
 };

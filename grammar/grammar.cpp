@@ -306,7 +306,26 @@ vector<LexedToken> Grammar::lex(string filename) {
   return result;
 }
 
-// TODO: Implement.
-bool Grammar::parse(const vector<LexedToken>& tokens) {
-  return true;
+void Grammar::generate(ofstream& f) {
+  // TODO: Generate lexing code.
+  f << "// ===== LEXING  CODE ===== //" << endl;
+
+  f << "// ===== PARSING CODE ===== //" << endl;
+  for (auto [head, ps] : productions) {
+    for (int i=0; i<ps.size(); i++) {
+      f << endl;
+      auto p = ps[i];
+      f << "// " << p.head << " ->";
+      for (auto minal : p.body) f << " " << minal.heart;
+      f << endl;
+
+      f << "bool PARSE_" << p.head << "_" << to_string(i) << " () {" << endl;
+      // TODO: Match body.
+      if (p.code.length() > 0) {
+        f << "\t" << p.code << endl;
+      }
+      f << "\t" << "return true;" << endl;
+      f << "}" << endl;
+    }
+  }
 }
