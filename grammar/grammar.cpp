@@ -146,7 +146,7 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   }
 }
 
-optional<string> parseProdMinal(Grammar& grammar, string& line, size_t& lineNum, int& i) {
+optional<string> parseProdMinal(string& line, size_t lineNum, int& i) {
   skipAnySpaces(lineNum, line, i);
   if (i>=line.size() || !isMinalNameChar(line[i])) {
     return optional<string>();
@@ -156,11 +156,38 @@ optional<string> parseProdMinal(Grammar& grammar, string& line, size_t& lineNum,
   return optional(line.substr(minalStart, i-minalStart));
 }
 
-vector<Minal> parseProdBody(Grammar& grammar, string& line, size_t& lineNum, int&i) {
+// TODO: Consider allowing multi-line blocks.
+// TODO: Use this in parseProduction / parseProdBody. Must consider...
+string parseCodeBlock(string &line, size_t &lineNum, int &i) {
+  expectChar('{', lineNum, line, i);
+  string s = "{";
+  int curlyDepth = 1;
+  bool inString = false;
+  for (; i < line.size() && curlyDepth > 0; i++) {
+    char c = line[i];
+    if (!inString) {
+      if (c == '{')
+        curlyDepth++;
+      else if (c == '}')
+        curlyDepth--;
+    }
+    if (c == '"' && line[i-1] != '\\')
+      inString = !inString;
+    s.push_back(c);
+  }
+  if (i < line.size()) {
+    throw lineErr(
+        lineNum,
+        "expected line to end after code block at index " + to_string(i), line);
+  }
+  return s;
+}
+
+vector<Minal> parseProdBody(string& line, size_t lineNum, int&i) {
   vector<Minal> body;
   while (i < line.size()) {
     skipSomeSpaces(lineNum, line, i);
-    auto minalOpt = parseProdMinal(grammar, line, lineNum, i);
+    auto minalOpt = parseProdMinal(line, lineNum, i);
     if (minalOpt.has_value()) {
       auto heart = minalOpt.value();
       body.emplace_back(Minal::getKind(heart), heart);
@@ -171,7 +198,6 @@ vector<Minal> parseProdBody(Grammar& grammar, string& line, size_t& lineNum, int
   return body;
 }
 
-// TODO: Add codegen for productions.
 void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f) {
   int i = 0;
   for (; i < line.size() && isalpha(line[i]); i++);
@@ -184,7 +210,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
 
   if (i < line.size()) { // SINGLE LINE PRODUCTION
     DEBUG(cout << "single line production" << endl);
-    vector<Minal> body = parseProdBody(grammar, line, lineNum, i);
+    vector<Minal> body = parseProdBody(line, lineNum, i);
     string code = "";
     grammar.productions.emplace(head, Production{head, {body}, code});
     return;
@@ -208,7 +234,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
       break;
     } else if (line[i] == '|') { // NEW BODY
       i++;
-      bodies.push_back(parseProdBody(grammar, line, lineNum, i));
+      bodies.push_back(parseProdBody(line, lineNum, i));
     } else {
       throw lineErr(lineNum, "expected '|' or ';' at index " + to_string(i), line);
     }
