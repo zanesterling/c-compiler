@@ -6,6 +6,7 @@ void Production::prettyPrint() {
   if (bodies.size() == 1) {
     cout << head << " ->";
     for (auto minal : bodies[0]) cout << " \"" << minal.heart << '"';
+    cout << " " << code;
     cout << endl;
   } else {
     cout << head << " ->" << endl;
@@ -15,7 +16,7 @@ void Production::prettyPrint() {
         cout << " \"" << minal.heart << '"';
       cout << endl;
     }
-    cout << "\t;" << endl;
+    cout << "\t; " << code << endl;
   }
 }
 
@@ -91,7 +92,7 @@ void expectString(string s, int lineNum, string &line, int &i) {
 
 void expectChar(char c, int lineNum, string &line, int &i) {
   if (i >= line.size() || line[i] != c) {
-    auto msg = "expected '" + to_string(c) + "' at index " + to_string(i);
+    auto msg = "expected '"s + c + "' at index " + to_string(i);
     throw lineErr(lineNum, msg, line);
   }
   i++;
@@ -147,7 +148,6 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
 }
 
 // TODO: Consider allowing multi-line blocks.
-// TODO: Use this in parseProduction / parseProdBody. Must consider...
 string parseCodeBlock(string &line, size_t &lineNum, int &i) {
   expectChar('{', lineNum, line, i);
   string s = "{";
@@ -177,10 +177,7 @@ vector<Minal> parseProdBody(string& line, size_t lineNum, int& i) {
   vector<Minal> body;
   while (i < line.size()) {
     skipSomeSpaces(lineNum, line, i);
-    if (i >= line.size()) break;
-    if (!isMinalNameChar(line[i])) {
-      throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
-    }
+    if (i >= line.size() || !isMinalNameChar(line[i])) break;
 
     // Parse a minal.
     int minalStart = i;
@@ -204,7 +201,11 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   if (i < line.size()) { // SINGLE LINE PRODUCTION
     DEBUG(cout << "single line production" << endl);
     vector<Minal> body = parseProdBody(line, lineNum, i);
-    string code = "";
+    skipAnySpaces(lineNum, line, i);
+    string code;
+    if (i < line.size() && line[i] == '{') {
+      code = parseCodeBlock(line, lineNum, i);
+    }
     grammar.productions.emplace(head, Production{head, {body}, code});
     return;
   }
@@ -223,11 +224,17 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
     skipAnySpaces(lineNum, line, i);
 
     if (line[i] == ';') { // END OF PRODUCTION
-      // TODO: Check if there's a code block.
+      skipAnySpaces(lineNum, line, ++i);
+      if (i < line.size()) {
+        code = parseCodeBlock(line, lineNum, i);
+      }
       break;
     } else if (line[i] == '|') { // NEW BODY
       i++;
       bodies.push_back(parseProdBody(line, lineNum, i));
+      if (i < line.size()) {
+        throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+      }
     } else {
       throw lineErr(lineNum, "expected '|' or ';' at index " + to_string(i), line);
     }
