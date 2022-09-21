@@ -146,16 +146,6 @@ void parseTerminal(Grammar &grammar, string &line, size_t lineNum) {
   }
 }
 
-optional<string> parseProdMinal(string& line, size_t lineNum, int& i) {
-  skipAnySpaces(lineNum, line, i);
-  if (i>=line.size() || !isMinalNameChar(line[i])) {
-    return optional<string>();
-  }
-  int minalStart = i;
-  for (; i<line.size() && isMinalNameChar(line[i]); i++);
-  return optional(line.substr(minalStart, i-minalStart));
-}
-
 // TODO: Consider allowing multi-line blocks.
 // TODO: Use this in parseProduction / parseProdBody. Must consider...
 string parseCodeBlock(string &line, size_t &lineNum, int &i) {
@@ -183,17 +173,20 @@ string parseCodeBlock(string &line, size_t &lineNum, int &i) {
   return s;
 }
 
-vector<Minal> parseProdBody(string& line, size_t lineNum, int&i) {
+vector<Minal> parseProdBody(string& line, size_t lineNum, int& i) {
   vector<Minal> body;
   while (i < line.size()) {
     skipSomeSpaces(lineNum, line, i);
-    auto minalOpt = parseProdMinal(line, lineNum, i);
-    if (minalOpt.has_value()) {
-      auto heart = minalOpt.value();
-      body.emplace_back(Minal::getKind(heart), heart);
-    } else if (i < line.size()) {
+    if (i >= line.size()) break;
+    if (!isMinalNameChar(line[i])) {
       throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
     }
+
+    // Parse a minal.
+    int minalStart = i;
+    for (; i < line.size() && isMinalNameChar(line[i]); i++);
+    auto heart = line.substr(minalStart, i - minalStart);
+    body.emplace_back(Minal::getKind(heart), heart);
   }
   return body;
 }
