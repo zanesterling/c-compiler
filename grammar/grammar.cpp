@@ -45,8 +45,9 @@ Grammar Grammar::fromFile(string filename) {
   string line;
   size_t lineNum = 0;
   while (getline(f, line)) {
-    if (line.size() == 0) goto nextline;
-    if (line.compare(0, 2, "//") == 0) goto nextline;
+    lineNum++; // This is fine: lineNum should start at 1.
+    if (line.size() == 0) continue;
+    if (line.compare(0, 2, "//") == 0) continue;
     if (line[0] == '%') { // Terminal declaration.
       parseTerminal(grammar, line, lineNum);
     } else if (line.find("->") != string::npos) { // Production.
@@ -71,8 +72,6 @@ Grammar Grammar::fromFile(string filename) {
     } else {
       throw lineErr(lineNum, "bad line layout", line);
     }
- nextline:
-    lineNum++;
   }
 
   return grammar;
@@ -157,6 +156,21 @@ optional<string> parseProdMinal(Grammar& grammar, string& line, size_t& lineNum,
   return optional(line.substr(minalStart, i-minalStart));
 }
 
+vector<Minal> parseProdBody(Grammar& grammar, string& line, size_t& lineNum, int&i) {
+  vector<Minal> body;
+  while (i < line.size()) {
+    skipSomeSpaces(lineNum, line, i);
+    auto minalOpt = parseProdMinal(grammar, line, lineNum, i);
+    if (minalOpt.has_value()) {
+      auto heart = minalOpt.value();
+      body.emplace_back(Minal::getKind(heart), heart);
+    } else if (i < line.size()) {
+      throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
+    }
+  }
+  return body;
+}
+
 // TODO: Add codegen for productions.
 void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& f) {
   int i = 0;
@@ -169,17 +183,9 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   expectString(" ->", lineNum, line, i);
 
   if (i < line.size()) { // SINGLE LINE PRODUCTION
-    vector<Minal> body;
-    string code;
-    while (i < line.size()) {
-      auto minalOpt = parseProdMinal(grammar, line, lineNum, i);
-      if (minalOpt.has_value()) {
-        auto heart = minalOpt.value();
-        body.push_back(Minal(Minal::getKind(heart), heart));
-      } else if (i < line.size()) {
-        throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
-      }
-    }
+    DEBUG(cout << "single line production" << endl);
+    vector<Minal> body = parseProdBody(grammar, line, lineNum, i);
+    string code = "";
     grammar.productions.emplace(head, Production{head, {body}, code});
     return;
   }
@@ -189,29 +195,20 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   string code;
   vector<Minal> body;
   while (true) {
+    DEBUG(cout << "multi line production" << endl);
     lineNum++;
     if (!getline(f, line)) {
       throw lineErr(lineNum, "encountered EOF inside production", line);
     }
-    for (i=0; i<line.size() && isspace(line[i]); i++);
+    i=0;
+    skipAnySpaces(lineNum, line, i);
 
     if (line[i] == ';') { // END OF PRODUCTION
       // TODO: Check if there's a code block.
       break;
     } else if (line[i] == '|') { // NEW BODY
       i++;
-      vector<Minal> &body = bodies.emplace_back();
-      while (i < line.size()) {
-        skipSomeSpaces(lineNum, line, i);
-        if (i == line.size()) break;
-
-        auto minalOpt = parseProdMinal(grammar, line, lineNum, i);
-        if (!minalOpt.has_value()) {
-          throw lineErr(lineNum, "expected minal at index " + to_string(i), line);
-        }
-        auto heart = minalOpt.value();
-        body.push_back(Minal(Minal::getKind(heart), heart));
-      }
+      bodies.push_back(parseProdBody(grammar, line, lineNum, i));
     } else {
       throw lineErr(lineNum, "expected '|' or ';' at index " + to_string(i), line);
     }
