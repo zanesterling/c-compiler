@@ -1,4 +1,5 @@
 #include "grammar.h"
+#include <stdexcept>
 
 // ===== class Production ===== //
 void Production::prettyPrint() {
@@ -16,7 +17,7 @@ void expectString(string s,     int lineNum, string& line, int& i);
 void expectChar  (char c,       int lineNum, string& line, int& i);
 void expectOneof (string chars, int lineNum, string& line, int& i);
 void skipSomeSpaces(int lineNum, string& line, int& i);
-void skipAnySpaces(int lineNum, string& line, int& i);
+void skipAnySpaces(string& line, int& i);
 
 
 runtime_error lineErr(int lineNum, string msg, string line) {
@@ -100,10 +101,10 @@ void expectOneof(string s, int lineNum, string &line, int &i) {
 
 void skipSomeSpaces(int lineNum, string &line, int &i) {
   expectChar(' ', lineNum, line, i);
-  skipAnySpaces(lineNum, line, i);
+  skipAnySpaces(line, i);
 }
 
-void skipAnySpaces(int lineNum, string &line, int &i) {
+void skipAnySpaces(string &line, int &i) {
   for (; i<line.size() && isspace(line[i]); i++);
 }
 
@@ -168,7 +169,7 @@ pair<vector<Minal>, string> parseProdBody(string& line, size_t lineNum, int& i) 
     if (i >= line.size()) break;
     if (line[i] == '{') {
       code = parseCodeBlock(line, lineNum, i);
-      skipAnySpaces(lineNum, line, i);
+      skipAnySpaces(line, i);
       if (i<line.size()) {
         throw lineErr(lineNum, "expected EOL after code block", line);
       }
@@ -200,7 +201,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
   if (i < line.size()) { // SINGLE LINE PRODUCTION
     DEBUG(cout << "single line production" << endl);
     auto [body, code] = parseProdBody(line, lineNum, i);
-    skipAnySpaces(lineNum, line, i);
+    skipAnySpaces(line, i);
     grammar.productions[head].push_back(Production{head, body, code});
     return;
   }
@@ -214,7 +215,7 @@ void parseProduction(Grammar& grammar, string& line, size_t& lineNum, ifstream& 
       throw lineErr(lineNum, "encountered EOF inside production", line);
     }
     i=0;
-    skipAnySpaces(lineNum, line, i);
+    skipAnySpaces(line, i);
 
     if (line[i] == ';') { // END OF PRODUCTION
       i++;
@@ -277,7 +278,7 @@ vector<LexedToken> Grammar::lex(string filename) {
     lineNum++;
     int i = 0;
     while (i<line.size()) {
-      for (; i<line.size() && isspace(line[i]); i++);
+      skipAnySpaces(line, i);
       if (i==line.size()) break;
 
       for (auto [name, kw] : keywords) {
@@ -307,8 +308,69 @@ vector<LexedToken> Grammar::lex(string filename) {
 }
 
 void Grammar::generate(ofstream& f) {
-  // TODO: Generate lexing code.
+  ifstream genericCodeFile("generic_code.cpp");
+  if (!genericCodeFile.is_open()) {
+    throw runtime_error("could not open generic_code.cpp");
+  }
+
+  string line;
+  const string stub = "/* INSERT GENERATED CODE HERE */";
+  while (getline(genericCodeFile, line) && line.compare(stub)!=0) {
+    f << line << endl;
+  }
+
   f << "// ===== LEXING  CODE ===== //" << endl;
+  int tokn = 0;
+  for (auto [name, _] : keywords) {
+    f << "int TOK_" << name << " = " << tokn++ << ";" << endl;
+  }
+  for (auto [name, _] : tokens) {
+    f << "int TOK_" << name << " = " << tokn++ << ";" << endl;
+  }
+  f << endl;
+
+  for (auto [name, kw] : keywords) {
+    f << endl;
+    f << "// %" << name << " \"" << kw << "\"" << endl;
+    f << "optional<Token> LEX_KW_" << name
+      << " (int lineNum, string& line, int& i) {" << endl;
+    f << "  string kw = \"" << kw << "\";" << endl;
+    f << "  if (matchstr(kw, line, i)) {" << endl;
+    f << "    i += kw.length();" << endl;
+    f << "    return optional(Token{TOK_" << name << ", kw});" << endl;
+    f << "  }" << endl;
+    f << "  return optional<Token>();" << endl;
+    f << "}" << endl;
+  }
+  f << endl;
+  f << "vector<KwMatchFunc> kw_match_funcs {" << endl;
+  for (auto [name, _] : keywords) {
+    f << "  LEX_KW_" << name << "," << endl;
+  }
+  f << "};" << endl;
+  f << endl;
+
+  for (auto [name, rgText] : tokens) {
+    f << endl;
+    f << "// %" << name << " " << rgText << endl;
+    f << "optional<Token> LEX_RX_" << name
+      << " (int lineNum, string& line, int& i) {" << endl;
+    // TODO: Need to escape this regex text.
+    f << "  regex reg(\"" + rgText + "\");" << endl;
+    f << "  cmatch m;" << endl;
+    f << "  if (!regex_search(line.c_str()+i, m, reg, regex_constants::match_continuous)) {" << endl;
+    f << "    return optional<Token>();" << endl;
+    f << "  }" << endl;
+    f << "  i += m.length();" << endl;
+    f << "  return optional(Token{TOK_" << name << ", m[0]});" << endl;
+    f << "}" << endl;
+  }
+  f << "vector<KwMatchFunc> rx_match_funcs {" << endl;
+  for (auto [name, _] : tokens) {
+    f << "  LEX_RX_" << name << "," << endl;
+  }
+  f << "};" << endl;
+  f << endl << endl;
 
   f << "// ===== PARSING CODE ===== //" << endl;
   for (auto [head, ps] : productions) {
@@ -319,13 +381,18 @@ void Grammar::generate(ofstream& f) {
       for (auto minal : p.body) f << " " << minal.heart;
       f << endl;
 
-      f << "bool PARSE_" << p.head << "_" << to_string(i) << " () {" << endl;
+      f << "int PARSE_" << p.head << "_" << to_string(i) << " () {" << endl;
       // TODO: Match body.
       if (p.code.length() > 0) {
         f << "\t" << p.code << endl;
       }
-      f << "\t" << "return true;" << endl;
+      f << "\t" << "return 0;" << endl;
       f << "}" << endl;
     }
+  }
+
+  // TODO: Fill out generic lex and parse code.
+  for (string s; getline(genericCodeFile, s);) {
+    f << s << endl;
   }
 }

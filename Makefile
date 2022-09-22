@@ -10,6 +10,15 @@ CXXFLAGS=-std=c++17
 run: a.out
 	./a.out
 
+runcomp: compiler.out
+	./compiler.out test-cases/0001_minimal-program.c
+
+compiler.out: parser_out.cpp
+	g++ $(FLAGS) parser_out.cpp -o compiler.out
+
+parser_out.cpp: a.out
+	./a.out
+
 clean:
 	rm -f a.out $(objects)
 

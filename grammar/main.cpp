@@ -23,7 +23,11 @@ int main() {
   }
   cout << endl;
 
-  ofstream f("parser_out.c");
+  auto outFn = "parser_out.cpp";
+  ofstream f(outFn);
+  if (!f.is_open()) {
+    cout << "error opening file: " << outFn << endl;
+  }
   grammar.generate(f);
   f.close();
 

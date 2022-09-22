@@ -1,4 +1,4 @@
 *.out
 *.o
 *.swp
-/parser_out.c
+/parser_out.cpp
