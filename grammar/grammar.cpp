@@ -265,48 +265,6 @@ bool Grammar::validate() {
   return true;
 }
 
-vector<LexedToken> Grammar::lex(string filename) {
-  ifstream f(filename);
-  if (!f.is_open()) {
-    throw runtime_error("error opening file: " + filename);
-  }
-
-  vector<LexedToken> result;
-  string line;
-  int lineNum = 0;
-  while (getline(f, line)) {
-    lineNum++;
-    int i = 0;
-    while (i<line.size()) {
-      skipAnySpaces(line, i);
-      if (i==line.size()) break;
-
-      for (auto [name, kw] : keywords) {
-        if (i+kw.length() > line.size()) continue;
-        if (line.compare(i, kw.length(), kw) != 0) continue;
-        result.push_back(LexedToken{name, kw});
-        i += kw.length();
-        goto foundToken;
-      }
-
-      for (auto [name, rgText] : tokens) {
-        regex reg(rgText);
-        cmatch m;
-        if (!regex_search(line.c_str()+i, m, reg, regex_constants::match_continuous)) {
-          continue;
-        }
-        result.push_back(LexedToken{name, m[0]});
-        i += m.length();
-        goto foundToken;
-      }
-
-      throw lineErr(lineNum, "no match at index " + to_string(i), line);
-   foundToken:;
-    }
-  }
-  return result;
-}
-
 void Grammar::generate(ofstream& f) {
   ifstream genericCodeFile("generic_code.cpp");
   if (!genericCodeFile.is_open()) {

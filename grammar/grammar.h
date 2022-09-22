@@ -62,7 +62,5 @@ public:
   static Grammar fromFile(string filename);
 
   bool validate();
-  vector<LexedToken> lex(string filename);
   void generate(ofstream& f);
-  // bool parse(const vector<LexedToken>& tokens);
 };

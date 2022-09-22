@@ -6,6 +6,9 @@
 
 using namespace std;
 
+static const bool _DEBUG = false;
+#define DEBUG(x) if (_DEBUG) { x; }
+
 bool matchstr(string &s, string &line, int i);
 
 typedef int TokenType;
@@ -57,7 +60,7 @@ vector<Token> lex(ifstream& f) {
       for (auto kw_match_func : kw_match_funcs) {
         optional<Token> optToken = kw_match_func(lineNum, line, i);
         if (!optToken.has_value()) continue;
-        cout << "found kw token: " << optToken.value().heart << endl;
+        DEBUG(cout << "found kw token: " << optToken.value().heart << endl);
         tokens.push_back(optToken.value());
         goto foundMatch;
       }
@@ -66,7 +69,7 @@ vector<Token> lex(ifstream& f) {
       for (auto rx_match_func : rx_match_funcs) {
         optional<Token> optToken = rx_match_func(lineNum, line, i);
         if (!optToken.has_value()) continue;
-        cout << "found rg token: " << optToken.value().heart << endl;
+        DEBUG(cout << "found rg token: " << optToken.value().heart << endl);
         tokens.push_back(optToken.value());
         goto foundMatch;
       }

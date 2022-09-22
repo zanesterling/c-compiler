@@ -37,18 +37,18 @@ int main() {
   // test_case(grammar, "test-cases/0004_initialization.c");
 }
 
-int test_case(Grammar &grammar, string fn) {
-  vector<LexedToken> tokens;
-  try {
-    tokens = grammar.lex(fn);
-  } catch (runtime_error e) {
-    cout << "🟥" << fn << endl;
-    cout << e.what() << endl;
-    return 1;
-  }
-  cout << "🟩" << fn << endl;
-  for (auto tk : tokens) {
-    DEBUG(cout << tk.name << " \"" << tk.contents << "\"" << endl);
-  }
-  return 0;
-}
+// int test_case(Grammar &grammar, string fn) {
+//   vector<LexedToken> tokens;
+//   try {
+//     tokens = grammar.lex(fn);
+//   } catch (runtime_error e) {
+//     cout << "🟥" << fn << endl;
+//     cout << e.what() << endl;
+//     return 1;
+//   }
+//   cout << "🟩" << fn << endl;
+//   for (auto tk : tokens) {
+//     DEBUG(cout << tk.name << " \"" << tk.contents << "\"" << endl);
+//   }
+//   return 0;
+// }
