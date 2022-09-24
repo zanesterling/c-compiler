@@ -15,10 +15,14 @@
 %ID        [a-zA-Z_][a-zA-Z0-9_]*
 %INT_CONST [0-9]+
 
+// TODO: Add code block with AST types.
+// TODO: Add code to add AST nodes after each production.
+
 
 func -> type ID LPAREN optarglist RPAREN LCURL stmts RCURL
 
 // TODO: add more types
+// TODO: vars can't be void, only func return types
 type ->
      | INT
      | VOID
@@ -37,9 +41,7 @@ arglist ->
         | arg COMMA arglist
         | arg
         ;
-arg ->
-    | type ID
-    ;
+arg -> type ID
 
 // TODO: Add more statements.
 stmt ->
@@ -51,8 +53,6 @@ stmt ->
      ;
 
 // TODO: Add more exprs.
-expr ->
-     | INT_CONST
-     ;
+expr -> INT_CONST
 
 !func

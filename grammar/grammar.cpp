@@ -24,6 +24,7 @@ runtime_error lineErr(int lineNum, string msg, string line) {
   return runtime_error(to_string(lineNum)+": " + msg+": \"" + line + "\"");
 }
 
+// TODO: Allow interspersed code blocks with %%. Need for AST.
 Grammar Grammar::fromFile(string filename) {
   ifstream f(filename);
   if (!f.is_open()) {
@@ -265,6 +266,7 @@ bool Grammar::validate() {
   return true;
 }
 
+// TODO: Add $$, $n logic.
 void Grammar::generate(ofstream& f) {
   ifstream genericCodeFile("generic_code.cpp");
   if (!genericCodeFile.is_open()) {
@@ -387,3 +389,4 @@ void Grammar::generate(ofstream& f) {
     f << s << endl;
   }
 }
+

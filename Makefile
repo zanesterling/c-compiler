@@ -16,7 +16,7 @@ runcomp: compiler.out
 compiler.out: parser_out.cpp
 	g++ $(FLAGS) parser_out.cpp -o compiler.out
 
-parser_out.cpp: a.out generic_code.cpp
+parser_out.cpp: a.out generic_code.cpp test-cases/c.gram
 	./a.out
 
 clean:
