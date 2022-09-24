@@ -290,7 +290,7 @@ void Grammar::generate(ofstream& f) {
   for (auto [name, kw] : keywords) {
     f << endl;
     f << "// %" << name << " \"" << kw << "\"" << endl;
-    f << "optional<Token> LEX_KW_" << name
+    f << "optional<Token> LEX_" << name
       << " (int lineNum, string& line, int& i) {" << endl;
     f << "  string kw = \"" << kw << "\";" << endl;
     f << "  if (matchstr(kw, line, i)) {" << endl;
@@ -303,7 +303,7 @@ void Grammar::generate(ofstream& f) {
   f << endl;
   f << "vector<KwMatchFunc> kw_match_funcs {" << endl;
   for (auto [name, _] : keywords) {
-    f << "  LEX_KW_" << name << "," << endl;
+    f << "  LEX_" << name << "," << endl;
   }
   f << "};" << endl;
   f << endl;
@@ -311,7 +311,7 @@ void Grammar::generate(ofstream& f) {
   for (auto [name, rgText] : tokens) {
     f << endl;
     f << "// %" << name << " " << rgText << endl;
-    f << "optional<Token> LEX_RX_" << name
+    f << "optional<Token> LEX_" << name
       << " (int lineNum, string& line, int& i) {" << endl;
     // TODO: Need to escape this regex text.
     f << "  regex reg(\"" + rgText + "\");" << endl;
@@ -325,12 +325,18 @@ void Grammar::generate(ofstream& f) {
   }
   f << "vector<KwMatchFunc> rx_match_funcs {" << endl;
   for (auto [name, _] : tokens) {
-    f << "  LEX_RX_" << name << "," << endl;
+    f << "  LEX_" << name << "," << endl;
   }
   f << "};" << endl;
   f << endl << endl;
 
   f << "// ===== PARSING CODE ===== //" << endl;
+
+  for (auto [head, _] : productions) {
+    f << "int PARSE_" << head << "(vector<Token>& tokens, int& tokIndex);" << endl;
+  }
+  f << endl;
+
   for (auto [head, ps] : productions) {
     for (int i=0; i<ps.size(); i++) {
       f << endl;
@@ -339,17 +345,44 @@ void Grammar::generate(ofstream& f) {
       for (auto minal : p.body) f << " " << minal.heart;
       f << endl;
 
-      f << "int PARSE_" << p.head << "_" << to_string(i) << " () {" << endl;
-      // TODO: Match body.
-      if (p.code.length() > 0) {
-        f << "\t" << p.code << endl;
+      f << "int PARSE_" << p.head << "_" << i
+        << " (vector<Token>& tokens, int& tokIndex) {" << endl;
+      f << "  int localTokIndex = tokIndex;" << endl;
+      for (auto minal : p.body) {
+        if (minal.kind == terminal) {
+          f << "  MATCH(" << minal.heart << ");" << endl;
+        } else if (minal.kind == nonterminal) {
+          f << "  PARSE(" << minal.heart << ");" << endl;
+        }
       }
-      f << "\t" << "return 0;" << endl;
+      if (p.code.length() > 0) {
+        f << "  " << p.code << endl;
+      }
+      f << "  tokIndex = localTokIndex;" << endl;
+      f << "  return 0;" << endl;
       f << "}" << endl;
     }
+
+    f << endl;
+    f << "int PARSE_" << head << " (vector<Token>& tokens, int& tokIndex) {" << endl;
+    f << "  DEBUGP(cout << \"parsing " << head << "\" << endl);" << endl;
+    f << "  _DEBUG_DEPTH++;" << endl;
+    f << "  int res;" << endl;
+    for (int i = 0; i < ps.size(); i++) {
+      f << "  if (PARSE_" << head << "_" << i << "(tokens, tokIndex) == 0) {" << endl;
+      f << "    _DEBUG_DEPTH--;" << endl;
+      f << "    return 0;" << endl;
+      f << "  }" << endl;
+    }
+    f << "  _DEBUG_DEPTH--;" << endl;
+    f << "  return 1;" << endl;
+    f << "}" << endl;
   }
 
-  // TODO: Fill out generic lex and parse code.
+  f << endl;
+  f << "ParseFunc PARSE_root = "
+    << "PARSE_" << this->startNonterminal << ";" << endl;
+
   for (string s; getline(genericCodeFile, s);) {
     f << s << endl;
   }
