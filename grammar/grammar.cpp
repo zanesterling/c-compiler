@@ -24,7 +24,6 @@ runtime_error lineErr(int lineNum, string msg, string line) {
   return runtime_error(to_string(lineNum)+": " + msg+": \"" + line + "\"");
 }
 
-// TODO: Allow interspersed code blocks with %%. Need for AST.
 Grammar Grammar::fromFile(string filename) {
   ifstream f(filename);
   if (!f.is_open()) {
@@ -34,31 +33,57 @@ Grammar Grammar::fromFile(string filename) {
   Grammar grammar;
   string line;
   size_t lineNum = 0;
+  DEBUG(cout << "reading token section" << endl);
+  // Read token section.
   while (getline(f, line)) {
-    lineNum++; // This is fine: lineNum should start at 1.
+    lineNum++;
     if (line.size() == 0) continue;
     if (line.compare(0, 2, "//") == 0) continue;
-    if (line[0] == '%') { // Terminal declaration.
+    if (line.compare(0, 2, "%%") == 0) {
+      // End of token section, begin first code block.
+      break;
+    }
+    if (line[0] == '%') {
       parseTerminal(grammar, line, lineNum);
-    } else if (line.find("->") != string::npos) { // Production.
+    } else {
+      throw lineErr(lineNum, "bad line layout", line);
+    }
+  }
+
+  DEBUG(cout << "reading preparse code block" << endl);
+  // Pre-parse code block.
+  while (getline(f, line)) {
+    lineNum++;
+    if (line.compare(0, 2, "%%") == 0) {
+      // End of first code block, begin parser section.
+      break;
+    }
+    grammar.preparseCodeBlock.append(line);
+    grammar.preparseCodeBlock.append("\n");
+  }
+
+  DEBUG(cout << "reading parse section" << endl);
+  // Parser production section.
+  while (getline(f, line)) {
+    lineNum++;
+    if (line.size() == 0) continue;
+    if (line.compare(0, 2, "//") == 0) continue;
+    if (line.find("->") != string::npos) {
       parseProduction(grammar, line, lineNum, f);
-    } else if (line[0] == '!') { // Set root nonterminal.
-      if (line.size() == 1) {
-        throw lineErr(lineNum, "empty start nonterminal", line);
-      }
+    } else if (line[0] == '!') {
       if (grammar.startNonterminal != "") {
         throw lineErr(lineNum, "start nonterminal already set", line);
       }
-      for (int i=1; i<line.size(); i++) {
-        if (!isalpha(line[i]) || !islower(line[i])) {
-          throw lineErr(lineNum, "invalid start nonterminal", line);
-        }
+      int i=1;
+      for (; i<line.size() && isalpha(line[i]) && islower(line[i]); i++);
+      if (i<line.size()) {
+        throw lineErr(lineNum, "nonterminal ended early at index " + to_string(i), line);
       }
-      auto s = line.substr(1);
-      if (grammar.productions.count(s) == 0) {
+      auto head = line.substr(1);
+      if (grammar.productions.count(head) == 0) {
         throw lineErr(lineNum, "nonterminal not recognized", line);
       }
-      grammar.startNonterminal = s;
+      grammar.startNonterminal = head;
     } else {
       throw lineErr(lineNum, "bad line layout", line);
     }
@@ -279,7 +304,7 @@ void Grammar::generate(ofstream& f) {
     f << line << endl;
   }
 
-  f << "// ===== LEXING  CODE ===== //" << endl;
+  f << "// ===== LEXING   CODE ===== //" << endl;
   int tokn = 0;
   for (auto [name, _] : keywords) {
     f << "int TOK_" << name << " = " << tokn++ << ";" << endl;
@@ -332,7 +357,11 @@ void Grammar::generate(ofstream& f) {
   f << "};" << endl;
   f << endl << endl;
 
-  f << "// ===== PARSING CODE ===== //" << endl;
+  f << "// ===== PREPARSE CODE ===== //" << endl;
+  f << preparseCodeBlock;
+  f << endl;
+
+  f << "// ===== PARSING  CODE ===== //" << endl;
 
   for (auto [head, _] : productions) {
     f << "int PARSE_" << head << "(vector<Token>& tokens, int& tokIndex);" << endl;

@@ -15,9 +15,12 @@
 %ID        [a-zA-Z_][a-zA-Z0-9_]*
 %INT_CONST [0-9]+
 
+%%
+
 // TODO: Add code block with AST types.
 // TODO: Add code to add AST nodes after each production.
 
+%%
 
 func -> type ID LPAREN optarglist RPAREN LCURL stmts RCURL
 

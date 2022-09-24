@@ -57,6 +57,8 @@ public:
   map<string, vector<Production>> productions;
   string startNonterminal;
 
+  string preparseCodeBlock;
+
   Grammar() {}
 
   static Grammar fromFile(string filename);
