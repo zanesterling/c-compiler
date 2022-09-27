@@ -32,6 +32,36 @@ static int _DEBUG_DEPTH = 0;
     return 1;                                                           \
   }
 
+bool isident(char c) {
+  return isalpha(c) || isdigit(c) || c == '_';
+}
+
+#define LEX_KW(name, kwstr)                                             \
+  optional<Token> LEX_##name(int lineNum, string &line, int &i) {       \
+    string kw = kwstr;                                                  \
+    if (!matchstr(kw, line, i))                                         \
+      return optional<Token>();                                         \
+    int ii = i + kw.size();                                             \
+    /* If */                                                            \
+    if (isalpha(line[i]) && ii < line.size() && isident(line[ii])) {    \
+      return optional<Token>();                                         \
+    }                                                                   \
+    i = ii;                                                             \
+    return optional(Token{TOK_##name, kw});                             \
+  }
+
+#define LEX_RG(name, rgText)                                            \
+  optional<Token> LEX_##name(int lineNum, string &line, int &i) {       \
+    regex reg(rgText);                                                  \
+    cmatch m;                                                           \
+    if (!regex_search(line.c_str() + i, m, reg,                         \
+                      regex_constants::match_continuous)) {             \
+      return optional<Token>();                                         \
+    }                                                                   \
+    i += m.length();                                                    \
+    return optional(Token{TOK_##name, m[0]});                           \
+  }
+
 bool matchstr(string &s, string &line, int i);
 
 typedef int TokenType;
@@ -113,6 +143,8 @@ void parse(vector<Token>& tokens) {
     cout << "failed parsing :-(";
   }
 }
+
+AstNode node;
 
 int main(int argc, char** argv) {
   if (argc != 2) {

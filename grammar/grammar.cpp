@@ -317,15 +317,7 @@ void Grammar::generate(ofstream& f) {
   for (auto [name, kw] : keywords) {
     f << endl;
     f << "// %" << name << " \"" << kw << "\"" << endl;
-    f << "optional<Token> LEX_" << name
-      << " (int lineNum, string& line, int& i) {" << endl;
-    f << "  string kw = \"" << kw << "\";" << endl;
-    f << "  if (matchstr(kw, line, i)) {" << endl;
-    f << "    i += kw.length();" << endl;
-    f << "    return optional(Token{TOK_" << name << ", kw});" << endl;
-    f << "  }" << endl;
-    f << "  return optional<Token>();" << endl;
-    f << "}" << endl;
+    f << "LEX_KW(" << name << ", \"" << kw << "\");" << endl;
   }
   f << endl;
   f << "vector<KwMatchFunc> kw_match_funcs {" << endl;
@@ -338,18 +330,10 @@ void Grammar::generate(ofstream& f) {
   for (auto [name, rgText] : tokens) {
     f << endl;
     f << "// %" << name << " " << rgText << endl;
-    f << "optional<Token> LEX_" << name
-      << " (int lineNum, string& line, int& i) {" << endl;
     // TODO: Need to escape this regex text.
-    f << "  regex reg(\"" + rgText + "\");" << endl;
-    f << "  cmatch m;" << endl;
-    f << "  if (!regex_search(line.c_str()+i, m, reg, regex_constants::match_continuous)) {" << endl;
-    f << "    return optional<Token>();" << endl;
-    f << "  }" << endl;
-    f << "  i += m.length();" << endl;
-    f << "  return optional(Token{TOK_" << name << ", m[0]});" << endl;
-    f << "}" << endl;
+    f << "LEX_RG(" << name << ", \"" << rgText << "\");" << endl;
   }
+  f << endl;
   f << "vector<KwMatchFunc> rx_match_funcs {" << endl;
   for (auto [name, _] : tokens) {
     f << "  LEX_" << name << "," << endl;
